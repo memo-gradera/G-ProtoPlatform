@@ -1,0 +1,58 @@
+{
+  "name": "IdeaStatusHistory",
+  "type": "object",
+  "properties": {
+    "idea_id": {
+      "type": "string",
+      "description": "ID of the idea that changed status"
+    },
+    "previous_status": {
+      "type": "string",
+      "enum": [
+        "ideas",
+        "in_progress",
+        "ready_4_demo",
+        "blocked",
+        "approved",
+        "rejected"
+      ],
+      "description": "Status before the transition"
+    },
+    "new_status": {
+      "type": "string",
+      "enum": [
+        "ideas",
+        "in_progress",
+        "ready_4_demo",
+        "blocked",
+        "approved",
+        "rejected"
+      ],
+      "description": "Status after the transition"
+    },
+    "changed_by": {
+      "type": "string",
+      "description": "User email or identifier who performed the change"
+    },
+    "changed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the status change occurred"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Primary reason for blocked, rejected, or other transitions"
+    },
+    "metadata": {
+      "type": "string",
+      "description": "JSON string with additional transition context"
+    }
+  },
+  "required": [
+    "idea_id",
+    "previous_status",
+    "new_status",
+    "changed_by",
+    "changed_at"
+  ]
+}

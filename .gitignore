@@ -1,0 +1,16 @@
+node_modules/
+**/node_modules/
+.env
+.env.*
+!.env.example
+dist/
+**/dist/
+.turbo/
+**/.turbo/
+.DS_Store
+*.log
+.vercel
+
+# Supabase local
+supabase/.branches
+supabase/.temp

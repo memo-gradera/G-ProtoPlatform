@@ -1,0 +1,27 @@
+import React, { useState } from 'react';
+import { Outlet } from 'react-router-dom';
+import Sidebar from './Sidebar';
+import DevModeBadge from '@/components/DevModeBadge';
+import RoleProtectedRoute from '@/components/RoleProtectedRoute';
+import { cn } from '@/lib/utils';
+
+export default function AppLayout() {
+  const [collapsed, setCollapsed] = useState(false);
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
+      <main className={cn(
+        "min-h-screen transition-all duration-300",
+        collapsed ? "ml-[68px]" : "ml-[240px]"
+      )}>
+        <div className="p-6 lg:p-8 max-w-[1600px] mx-auto">
+          <DevModeBadge />
+          <RoleProtectedRoute>
+            <Outlet />
+          </RoleProtectedRoute>
+        </div>
+      </main>
+    </div>
+  );
+}

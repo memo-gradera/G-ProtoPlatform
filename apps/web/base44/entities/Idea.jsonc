@@ -1,0 +1,150 @@
+{
+  "name": "Idea",
+  "type": "object",
+  "properties": {
+    "solution_name": {
+      "type": "string",
+      "description": "Name of the proposed solution"
+    },
+    "short_description": {
+      "type": "string",
+      "description": "Brief description of the idea"
+    },
+    "why_it_matters": {
+      "type": "string",
+      "description": "Business value and impact"
+    },
+    "target_user": {
+      "type": "string",
+      "description": "Who this solution is for"
+    },
+    "minimum_viability": {
+      "type": "string",
+      "description": "MVP functionality requirements"
+    },
+    "what_makes_it_unique": {
+      "type": "string",
+      "description": "Differentiators and unique value"
+    },
+    "acceptance_criteria": {
+      "type": "string",
+      "description": "Criteria for success"
+    },
+    "owner": {
+      "type": "string",
+      "description": "Person responsible for this idea"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low"
+      ],
+      "default": "medium"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ideas",
+        "in_progress",
+        "ready_4_demo",
+        "blocked",
+        "approved",
+        "rejected"
+      ],
+      "default": "ideas"
+    },
+    "eta": {
+      "type": "string",
+      "format": "date",
+      "description": "Expected completion date"
+    },
+    "blocker_reason": {
+      "type": "string",
+      "description": "Reason for blocking"
+    },
+    "prototype_url": {
+      "type": "string",
+      "description": "URL to the prototype"
+    },
+    "demo_notes": {
+      "type": "string",
+      "description": "Notes for the demo"
+    },
+    "decision_notes": {
+      "type": "string",
+      "description": "Executive decision notes recorded at approval"
+    },
+    "executive_decision": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected",
+        "needs_revision"
+      ],
+      "default": "pending"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "description": "Reason for rejection"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "ai_ml",
+        "automation",
+        "analytics",
+        "ux",
+        "infrastructure",
+        "integration",
+        "other"
+      ],
+      "default": "other"
+    },
+    "prototype_name": {
+      "type": "string",
+      "description": "Blueprint: working name for the prototype"
+    },
+    "problem_statement": {
+      "type": "string",
+      "description": "Blueprint: core problem being solved"
+    },
+    "target_persona": {
+      "type": "string",
+      "description": "Blueprint: primary user or stakeholder persona"
+    },
+    "value_hypothesis": {
+      "type": "string",
+      "description": "Blueprint: expected value if the hypothesis holds"
+    },
+    "minimum_viable_functionality": {
+      "type": "string",
+      "description": "Blueprint: smallest feature set to validate the idea"
+    },
+    "success_criteria": {
+      "type": "string",
+      "description": "Blueprint: measurable outcomes for prototype success"
+    },
+    "demo_scenario": {
+      "type": "string",
+      "description": "Blueprint: executive demo walkthrough script"
+    },
+    "technical_approach": {
+      "type": "string",
+      "description": "Blueprint: implementation and architecture approach"
+    },
+    "market_differentiator": {
+      "type": "string",
+      "description": "Blueprint: unique market advantage"
+    }
+  },
+  "required": [
+    "solution_name",
+    "short_description",
+    "owner",
+    "status"
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "name": "Prototype",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the prototype"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "ai_ml",
+        "automation",
+        "analytics",
+        "ux",
+        "infrastructure",
+        "integration",
+        "other"
+      ],
+      "default": "other"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "in_development",
+        "demo_ready",
+        "approved",
+        "archived"
+      ],
+      "default": "draft"
+    },
+    "owner": {
+      "type": "string",
+      "description": "Person responsible"
+    },
+    "demo_url": {
+      "type": "string",
+      "description": "URL to live demo"
+    },
+    "screenshot_url": {
+      "type": "string",
+      "description": "Screenshot of the prototype"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tags for categorization"
+    },
+    "related_idea_id": {
+      "type": "string",
+      "description": "ID of the related idea"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description"
+    }
+  },
+  "required": [
+    "name",
+    "owner",
+    "status"
+  ]
+}

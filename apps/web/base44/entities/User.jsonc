@@ -1,0 +1,25 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "innovation_lead",
+        "developer",
+        "executive_reviewer",
+        "viewer"
+      ],
+      "default": "viewer"
+    },
+    "department": {
+      "type": "string",
+      "description": "User's department"
+    },
+    "avatar_url": {
+      "type": "string",
+      "description": "Profile picture URL"
+    }
+  }
+}
