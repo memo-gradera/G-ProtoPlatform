@@ -1,0 +1,14 @@
+# Terraform local artifacts
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars.local
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Sensitive variable files (use TF_VAR_ or CI secrets instead)
+secrets.tfvars

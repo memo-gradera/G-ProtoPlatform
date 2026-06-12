@@ -1,0 +1,295 @@
+// GRADERA Innovation Hub — Azure PostgreSQL production schema
+// https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums (aligned with @proto-platform/contracts where applicable)
+// ---------------------------------------------------------------------------
+
+enum AppRoleName {
+  admin
+  innovation_lead
+  developer
+  executive_reviewer
+  viewer
+}
+
+enum UserStatus {
+  active
+  inactive
+  pending
+  suspended
+}
+
+enum IdeaStatus {
+  ideas
+  in_progress
+  ready_for_demo
+  approved
+  blocked
+  rejected
+}
+
+enum IdeaPriority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum PrototypeStatus {
+  draft
+  attached
+  published
+  archived
+}
+
+enum ReviewDecision {
+  pending
+  approved
+  rejected
+}
+
+enum AttachmentEntityType {
+  idea
+  prototype
+  review
+  user
+}
+
+enum AuditEntityType {
+  user
+  idea
+  prototype
+  review
+  attachment
+  role
+}
+
+// ---------------------------------------------------------------------------
+// Identity & RBAC
+// ---------------------------------------------------------------------------
+
+model User {
+  id              String     @id @default(uuid()) @db.Uuid
+  entraObjectId   String?    @unique @map("entra_object_id") @db.VarChar(128)
+  email           String     @unique @db.VarChar(320)
+  fullName        String     @map("full_name") @db.VarChar(255)
+  status          UserStatus @default(pending)
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  userRoles            UserRole[]
+  ownedIdeas           Idea[]              @relation("IdeaOwner")
+  ownedPrototypes      Prototype[]         @relation("PrototypeOwner")
+  ideaStatusChanges    IdeaStatusHistory[] @relation("StatusChangedBy")
+  prototypeReviews     PrototypeReview[]   @relation("ReviewReviewer")
+  uploadedAttachments  Attachment[]        @relation("AttachmentUploader")
+  auditEvents          AuditEvent[]        @relation("AuditActor")
+
+  @@map("users")
+}
+
+model Role {
+  id          String      @id @default(uuid()) @db.Uuid
+  name        AppRoleName @unique
+  description String?     @db.Text
+
+  userRoles UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  userId String @map("user_id") @db.Uuid
+  roleId String @map("role_id") @db.Uuid
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+// ---------------------------------------------------------------------------
+// Innovation pipeline
+// ---------------------------------------------------------------------------
+
+model Idea {
+  id                           String       @id @default(uuid()) @db.Uuid
+  solutionName                 String       @map("solution_name") @db.VarChar(255)
+  description                  String?      @db.Text
+  whyItMatters                 String?      @map("why_it_matters") @db.Text
+  targetUser                   String?      @map("target_user") @db.Text
+  minimumViableFunctionality   String?      @map("minimum_viable_functionality") @db.Text
+  valueHypothesis              String?      @map("value_hypothesis") @db.Text
+  successCriteria              String?      @map("success_criteria") @db.Text
+  acceptanceCriteria           String?      @map("acceptance_criteria") @db.Text
+  ownerId                      String       @map("owner_id") @db.Uuid
+  status                       IdeaStatus   @default(ideas)
+  priority                     IdeaPriority @default(medium)
+  etaDate                      DateTime?    @map("eta_date") @db.Date
+  blockerReason                String?      @map("blocker_reason") @db.Text
+  rejectionReason              String?      @map("rejection_reason") @db.Text
+  prototypeUrl                 String?      @map("prototype_url") @db.Text
+  demoNotes                    String?      @map("demo_notes") @db.Text
+  decisionNotes                String?      @map("decision_notes") @db.Text
+  createdAt                    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  owner          User                @relation("IdeaOwner", fields: [ownerId], references: [id])
+  statusHistory  IdeaStatusHistory[]
+  prototypes     Prototype[]
+  reviews        PrototypeReview[]
+
+  @@index([status])
+  @@index([ownerId])
+  @@map("ideas")
+}
+
+model IdeaStatusHistory {
+  id               String      @id @default(uuid()) @db.Uuid
+  ideaId           String      @map("idea_id") @db.Uuid
+  previousStatus   IdeaStatus? @map("previous_status")
+  newStatus        IdeaStatus  @map("new_status")
+  changedByUserId  String      @map("changed_by_user_id") @db.Uuid
+  changedAt        DateTime    @default(now()) @map("changed_at") @db.Timestamptz(6)
+  reason           String?     @db.Text
+  metadataJson     Json?       @map("metadata_json") @db.JsonB
+
+  idea      Idea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  changedBy User @relation("StatusChangedBy", fields: [changedByUserId], references: [id])
+
+  @@index([ideaId, changedAt])
+  @@map("idea_status_history")
+}
+
+// ---------------------------------------------------------------------------
+// Prototypes & catalog
+// ---------------------------------------------------------------------------
+
+model Prototype {
+  id             String          @id @default(uuid()) @db.Uuid
+  name           String          @db.VarChar(255)
+  description    String?         @db.Text
+  category       String?         @db.VarChar(128)
+  status         PrototypeStatus @default(draft)
+  ownerId        String          @map("owner_id") @db.Uuid
+  demoUrl        String?         @map("demo_url") @db.Text
+  screenshotUrl  String?         @map("screenshot_url") @db.Text
+  relatedIdeaId  String?         @map("related_idea_id") @db.Uuid
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  owner        User              @relation("PrototypeOwner", fields: [ownerId], references: [id])
+  relatedIdea  Idea?             @relation(fields: [relatedIdeaId], references: [id], onDelete: SetNull)
+  tagMaps      PrototypeTagMap[]
+  reviews      PrototypeReview[]
+
+  @@index([status])
+  @@index([ownerId])
+  @@map("prototypes")
+}
+
+model PrototypeTag {
+  id   String @id @default(uuid()) @db.Uuid
+  name String @unique @db.VarChar(64)
+
+  prototypes PrototypeTagMap[]
+
+  @@map("prototype_tags")
+}
+
+model PrototypeTagMap {
+  prototypeId String @map("prototype_id") @db.Uuid
+  tagId       String @map("tag_id") @db.Uuid
+
+  prototype Prototype    @relation(fields: [prototypeId], references: [id], onDelete: Cascade)
+  tag       PrototypeTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([prototypeId, tagId])
+  @@map("prototype_tag_map")
+}
+
+// ---------------------------------------------------------------------------
+// Executive review
+// ---------------------------------------------------------------------------
+
+model RejectionReason {
+  id          String  @id @default(uuid()) @db.Uuid
+  code        String  @unique @db.VarChar(64)
+  label       String  @db.VarChar(255)
+  description String? @db.Text
+  active      Boolean @default(true)
+
+  reviews PrototypeReview[]
+
+  @@map("rejection_reasons")
+}
+
+model PrototypeReview {
+  id                 String         @id @default(uuid()) @db.Uuid
+  prototypeId        String         @map("prototype_id") @db.Uuid
+  ideaId             String         @map("idea_id") @db.Uuid
+  reviewerId         String         @map("reviewer_id") @db.Uuid
+  decision           ReviewDecision @default(pending)
+  decisionNotes      String?        @map("decision_notes") @db.Text
+  rejectionReasonId  String?        @map("rejection_reason_id") @db.Uuid
+  rejectionReason    String?        @map("rejection_reason") @db.Text
+  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  prototype              Prototype        @relation(fields: [prototypeId], references: [id], onDelete: Cascade)
+  idea                   Idea             @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  reviewer               User             @relation("ReviewReviewer", fields: [reviewerId], references: [id])
+  catalogRejectionReason RejectionReason? @relation(fields: [rejectionReasonId], references: [id], onDelete: SetNull)
+
+  @@index([ideaId])
+  @@index([prototypeId])
+  @@map("prototype_reviews")
+}
+
+// ---------------------------------------------------------------------------
+// Files & audit
+// ---------------------------------------------------------------------------
+
+model Attachment {
+  id               String               @id @default(uuid()) @db.Uuid
+  entityType       AttachmentEntityType @map("entity_type")
+  entityId         String               @map("entity_id") @db.Uuid
+  fileName         String               @map("file_name") @db.VarChar(512)
+  fileUrl          String               @map("file_url") @db.Text
+  contentType      String?              @map("content_type") @db.VarChar(255)
+  uploadedByUserId String               @map("uploaded_by_user_id") @db.Uuid
+  createdAt        DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  uploadedBy User @relation("AttachmentUploader", fields: [uploadedByUserId], references: [id])
+
+  @@index([entityType, entityId])
+  @@map("attachments")
+}
+
+model AuditEvent {
+  id           String          @id @default(uuid()) @db.Uuid
+  actorUserId  String?         @map("actor_user_id") @db.Uuid
+  action       String          @db.VarChar(128)
+  entityType   AuditEntityType @map("entity_type")
+  entityId     String?         @map("entity_id") @db.Uuid
+  beforeJson   Json?           @map("before_json") @db.JsonB
+  afterJson    Json?           @map("after_json") @db.JsonB
+  metadataJson Json?           @map("metadata_json") @db.JsonB
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actor User? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_events")
+}

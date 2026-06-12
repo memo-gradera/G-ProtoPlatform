@@ -101,7 +101,7 @@ function buildInitialState() {
     },
   ];
 
-  return { ideas, prototypes, users, history };
+  return { ideas, prototypes, users, history, reviews: [] };
 }
 
 function readState() {
@@ -111,7 +111,11 @@ function readState() {
   try {
     const raw = window.localStorage.getItem(DEV_DATA_STORAGE_KEY);
     if (raw) {
-      return JSON.parse(raw);
+      const state = JSON.parse(raw);
+      if (!Array.isArray(state.reviews)) {
+        state.reviews = [];
+      }
+      return state;
     }
   } catch {
     // fall through to initial seed
@@ -270,6 +274,33 @@ export const devDataStore = {
       ...entry,
     };
     state.history.push(record);
+    writeState(state);
+    return { ...record };
+  },
+
+  listReviews({ ideaId } = {}) {
+    const reviews = readState().reviews ?? [];
+    if (!ideaId) {
+      return reviews.map((review) => ({ ...review }));
+    }
+    return reviews
+      .filter((review) => review.idea_id === ideaId)
+      .map((review) => ({ ...review }));
+  },
+
+  createReview(payload) {
+    const state = readState();
+    if (!state.reviews) {
+      state.reviews = [];
+    }
+    const now = new Date().toISOString();
+    const record = {
+      id: generateId('review'),
+      created_at: now,
+      created_date: now,
+      ...payload,
+    };
+    state.reviews.push(record);
     writeState(state);
     return { ...record };
   },

@@ -9,6 +9,13 @@ import {
 import { devDataStore, isDevDataBypassEnabled } from '@/lib/devDataStore';
 import { assertCanPerformAction } from '@/lib/permissionGuard';
 import { ideaStatusHistoryService } from '@/services/ideaStatusHistoryService';
+import { isApiBackendEnabled } from '@/services/backendMode';
+import { apiClient } from '@/services/apiClient';
+import {
+  buildTransitionPayload,
+  normalizeIdea,
+  toApiIdeaStatus,
+} from '@/services/apiMappers';
 
 const DEFAULT_SORT = '-created_date';
 const DEFAULT_LIMIT = 500;
@@ -20,6 +27,14 @@ function stripStatus(payload = {}) {
   return rest;
 }
 
+function mapIdeaPayloadForApi(payload = {}) {
+  const mapped = { ...payload };
+  if (mapped.status != null) {
+    mapped.status = toApiIdeaStatus(mapped.status);
+  }
+  return mapped;
+}
+
 /**
  * Persists non-status idea fields. Status changes must use transitionStatus/moveStage.
  */
@@ -29,12 +44,18 @@ export const ideasService = {
     if (isDevDataBypassEnabled()) {
       return Promise.resolve(devDataStore.listIdeas({ sort, limit }));
     }
+    if (isApiBackendEnabled()) {
+      return apiClient.get('/ideas').then((ideas) => ideas.map(normalizeIdea));
+    }
     return base44.entities.Idea.list(sort, limit);
   },
 
   get(id) {
     if (isDevDataBypassEnabled()) {
       return Promise.resolve(devDataStore.getIdea(id));
+    }
+    if (isApiBackendEnabled()) {
+      return apiClient.get(`/ideas/${id}`).then(normalizeIdea);
     }
     return base44.entities.Idea.get(id);
   },
@@ -43,6 +64,10 @@ export const ideasService = {
     await assertCanPerformAction('idea.create');
     if (isDevDataBypassEnabled()) {
       return devDataStore.createIdea(payload);
+    }
+    if (isApiBackendEnabled()) {
+      const created = await apiClient.post('/ideas', mapIdeaPayloadForApi(payload));
+      return normalizeIdea(created);
     }
     return base44.entities.Idea.create(payload);
   },
@@ -55,10 +80,19 @@ export const ideasService = {
     }
     const idea = isDevDataBypassEnabled()
       ? devDataStore.getIdea(id)
-      : await base44.entities.Idea.get(id);
+      : isApiBackendEnabled()
+        ? normalizeIdea(await apiClient.get(`/ideas/${id}`))
+        : await base44.entities.Idea.get(id);
     await assertCanPerformAction('idea.edit', { idea });
     if (isDevDataBypassEnabled()) {
       return devDataStore.updateIdea(id, payload);
+    }
+    if (isApiBackendEnabled()) {
+      const updated = await apiClient.patch(
+        `/ideas/${id}`,
+        mapIdeaPayloadForApi(payload),
+      );
+      return normalizeIdea(updated);
     }
     return base44.entities.Idea.update(id, payload);
   },
@@ -70,7 +104,9 @@ export const ideasService = {
     const { metadata = {}, patch = {} } = options;
     const idea = isDevDataBypassEnabled()
       ? devDataStore.getIdea(id)
-      : await base44.entities.Idea.get(id);
+      : isApiBackendEnabled()
+        ? normalizeIdea(await apiClient.get(`/ideas/${id}`))
+        : await base44.entities.Idea.get(id);
     const storageStatus = toStorageStatus(targetStatus);
 
     const previousStatus = idea.status;
@@ -108,6 +144,12 @@ export const ideasService = {
       status: storageStatus,
     };
 
+    if (isApiBackendEnabled()) {
+      const transitionBody = buildTransitionPayload(storageStatus, context);
+      const updated = await apiClient.post(`/ideas/${id}/transition`, transitionBody);
+      return normalizeIdea(updated);
+    }
+
     const updated = isDevDataBypassEnabled()
       ? devDataStore.updateIdea(id, updatePayload)
       : await base44.entities.Idea.update(id, updatePayload);
@@ -141,10 +183,16 @@ export const ideasService = {
   async remove(id) {
     const idea = isDevDataBypassEnabled()
       ? devDataStore.getIdea(id)
-      : await base44.entities.Idea.get(id);
+      : isApiBackendEnabled()
+        ? normalizeIdea(await apiClient.get(`/ideas/${id}`))
+        : await base44.entities.Idea.get(id);
     await assertCanPerformAction('idea.delete', { idea });
     if (isDevDataBypassEnabled()) {
       devDataStore.deleteIdea(id);
+      return;
+    }
+    if (isApiBackendEnabled()) {
+      await apiClient.delete(`/ideas/${id}`);
       return;
     }
     return base44.entities.Idea.delete(id);

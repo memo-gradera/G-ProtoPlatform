@@ -1,6 +1,6 @@
 import React from 'react';
 
-const UserNotRegisteredError = () => {
+const UserNotRegisteredError = ({ message }) => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-white to-slate-50">
       <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-lg border border-slate-100">
@@ -12,7 +12,8 @@ const UserNotRegisteredError = () => {
           </div>
           <h1 className="text-3xl font-bold text-slate-900 mb-4">Access Restricted</h1>
           <p className="text-slate-600 mb-8">
-            You are not registered to use this application. Please contact the app administrator to request access.
+            {message ||
+              'You are not registered to use this application. Please contact the app administrator to request access.'}
           </p>
           <div className="p-4 bg-slate-50 rounded-md text-sm text-slate-600">
             <p>If you believe this is an error, you can:</p>

@@ -2,6 +2,9 @@ import { differenceInDays } from 'date-fns';
 import { ideasService } from '@/services/ideasService';
 import { ideaStatusHistoryService } from '@/services/ideaStatusHistoryService';
 import { prototypesService } from '@/services/prototypesService';
+import { isApiBackendEnabled } from '@/services/backendMode';
+import { apiClient } from '@/services/apiClient';
+import { normalizeDashboardKpis } from '@/services/apiMappers';
 
 /**
  * Average days from idea creation to first Ready for Demo transition (history-based).
@@ -77,6 +80,11 @@ function computeAvgCycleTimeLegacy(ideas) {
 
 export const dashboardService = {
   async getKpis() {
+    if (isApiBackendEnabled()) {
+      const kpis = await apiClient.get('/dashboard/kpis');
+      return normalizeDashboardKpis(kpis);
+    }
+
     const [ideas, prototypes, history] = await Promise.all([
       ideasService.list(),
       prototypesService.list(),

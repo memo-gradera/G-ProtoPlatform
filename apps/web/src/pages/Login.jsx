@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
+import { loginWithMicrosoft } from "@/auth/tokenProvider";
 import { clearDevBypassLoggedOut, isDevAuthBypassEnabled } from "@/lib/devUser";
+import { isMsalAuthMode } from "@/lib/authMode";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +21,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const devBypass = isDevAuthBypassEnabled();
+  const msalAuth = isMsalAuthMode();
 
   const handleDevContinue = async () => {
     clearDevBypassLoggedOut();
@@ -44,6 +47,17 @@ export default function Login() {
     base44.auth.loginWithProvider("google", "/");
   };
 
+  const handleMicrosoft = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      await loginWithMicrosoft();
+    } catch (err) {
+      setError(err.message || "Microsoft sign-in failed.");
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthLayout
       logo={<GraderaLogo size="xl" />}
@@ -51,12 +65,14 @@ export default function Login() {
       subtitle="GRADERA Innovation Hub"
       subtitleLine2="Rapid Prototype Development Platform"
       footer={
-        <>
-          Don't have an account?{" "}
-          <Link to="/register" className="text-primary font-medium hover:underline">
-            Create one
-          </Link>
-        </>
+        msalAuth ? null : (
+          <>
+            Don't have an account?{" "}
+            <Link to="/register" className="text-primary font-medium hover:underline">
+              Create one
+            </Link>
+          </>
+        )
       }
     >
       {devBypass && (
@@ -68,6 +84,32 @@ export default function Login() {
           Continue as dev user
         </Button>
       )}
+
+      {msalAuth ? (
+        <>
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+              {error}
+            </div>
+          )}
+          <Button
+            type="button"
+            className="w-full h-12 text-sm font-medium"
+            onClick={handleMicrosoft}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Redirecting...
+              </>
+            ) : (
+              "Sign in with Microsoft"
+            )}
+          </Button>
+        </>
+      ) : (
+        <>
       <Button
         variant="outline"
         className="w-full h-12 text-sm font-medium mb-6"
@@ -142,6 +184,8 @@ export default function Login() {
           )}
         </Button>
       </form>
+        </>
+      )}
     </AuthLayout>
   );
 }

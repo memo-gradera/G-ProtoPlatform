@@ -61,6 +61,18 @@ When `VITE_DEV_DATA_BYPASS=true`:
 
 Restart `pnpm dev` after changing env flags.
 
+## Local integration modes (summary)
+
+| Mode | Auth | Backend | Use case |
+|------|------|---------|----------|
+| **A** | `local` + `DEV_AUTH_BYPASS` | `local` + `DEV_DATA_BYPASS` | Offline pilot |
+| **B** | `local` + `DEV_AUTH_BYPASS` | `api` | Frontend against local `gradera-api` without MSAL |
+| **C** | `msal` | `api` | Production-like Entra + API |
+
+Run API smoke checks (Mode B): `pnpm check:api` (requires running API with `DEV_AUTH_BYPASS=true`).
+
+See [`docs/security/frontend-msal.md`](../../docs/security/frontend-msal.md) and [`docs/api-service-coverage.md`](./docs/api-service-coverage.md).
+
 ## Running the Innovation Hub Pilot
 
 ### Run locally

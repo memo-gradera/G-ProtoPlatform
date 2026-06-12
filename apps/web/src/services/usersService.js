@@ -1,11 +1,30 @@
 import { base44 } from '@/api/base44Client';
 import { ROLES } from '@/domain/rbac';
 import { devDataStore, isDevDataBypassEnabled } from '@/lib/devDataStore';
+import { isApiBackendEnabled } from '@/services/backendMode';
+import { apiClient } from '@/services/apiClient';
+import { normalizeApiUser } from '@/services/apiMappers';
 
 export const usersService = {
+  async me() {
+    if (isDevDataBypassEnabled()) {
+      const users = devDataStore.listUsers();
+      return users.find((user) => user.id === 'dev-user') ?? users[0] ?? null;
+    }
+    if (isApiBackendEnabled()) {
+      const profile = await apiClient.get('/users/me');
+      return normalizeApiUser(profile);
+    }
+    const authUser = await base44.auth.me();
+    return this.enrichAuthUserWithRole(authUser);
+  },
+
   list() {
     if (isDevDataBypassEnabled()) {
       return Promise.resolve(devDataStore.listUsers());
+    }
+    if (isApiBackendEnabled()) {
+      return apiClient.get('/users').then((users) => users.map(normalizeApiUser));
     }
     return base44.entities.User.list();
   },
@@ -75,6 +94,10 @@ export const usersService = {
     await assertCanPerformAction('admin.manage_users');
     if (isDevDataBypassEnabled()) {
       return devDataStore.updateUserRole(id, role);
+    }
+    if (isApiBackendEnabled()) {
+      const updated = await apiClient.patch(`/users/${id}/role`, { role });
+      return normalizeApiUser(updated);
     }
     return base44.entities.User.update(id, { role });
   },

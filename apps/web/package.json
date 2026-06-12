@@ -12,9 +12,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "seed:pilot": "node scripts/seedPilotDemo.mjs",
+    "check:api": "node scripts/checkApiMode.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@azure/msal-browser": "^5.13.0",
+    "@azure/msal-react": "^5.4.4",
     "@base44/sdk": "^0.8.31",
     "@base44/vite-plugin": "^1.0.21",
     "@hello-pangea/dnd": "^17.0.0",

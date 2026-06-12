@@ -2,6 +2,11 @@ import { base44 } from '@/api/base44Client';
 import { normalizeStatus } from '@/domain/ideaWorkflow';
 import { devDataStore, isDevDataBypassEnabled } from '@/lib/devDataStore';
 import { createDevUser, isDevAuthBypassEnabled } from '@/lib/devUser';
+import { isMsalAuthMode } from '@/lib/authMode';
+import { getSessionUser } from '@/auth/sessionUser';
+import { isApiBackendEnabled } from '@/services/backendMode';
+import { apiClient } from '@/services/apiClient';
+import { normalizeHistoryEntry } from '@/services/apiMappers';
 
 const DEFAULT_SORT = '-changed_at';
 const DEFAULT_LIMIT = 1000;
@@ -56,6 +61,11 @@ async function resolveChangedBy(metadata = {}) {
     return user?.email || user?.id || user?.full_name || 'unknown';
   }
 
+  if (isMsalAuthMode()) {
+    const user = getSessionUser();
+    return user?.email || user?.id || user?.full_name || 'unknown';
+  }
+
   try {
     const user = await base44.auth.me();
     return user?.email || user?.id || user?.full_name || 'unknown';
@@ -70,12 +80,19 @@ export const ideaStatusHistoryService = {
     if (isDevDataBypassEnabled()) {
       return Promise.resolve(devDataStore.listHistory({ sort, limit }));
     }
+    if (isApiBackendEnabled()) {
+      return Promise.resolve([]);
+    }
     return base44.entities.IdeaStatusHistory.list(sort, limit);
   },
 
   async listByIdea(ideaId, options = {}) {
     if (isDevDataBypassEnabled()) {
       return devDataStore.listHistoryByIdea(ideaId, options);
+    }
+    if (isApiBackendEnabled()) {
+      const entries = await apiClient.get(`/ideas/${ideaId}/status-history`);
+      return entries.map(normalizeHistoryEntry);
     }
     const entries = await this.list(options);
     return entries.filter((entry) => entry.idea_id === ideaId);
@@ -88,6 +105,10 @@ export const ideaStatusHistoryService = {
     context = {},
     metadata = {},
   }) {
+    if (isApiBackendEnabled()) {
+      return null;
+    }
+
     const mergedContext = { ...idea, ...context, ...metadata };
     const reason = extractReason(newStatus, mergedContext);
     const changedBy = await resolveChangedBy(metadata);

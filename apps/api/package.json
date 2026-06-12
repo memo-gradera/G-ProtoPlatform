@@ -1,0 +1,42 @@
+{
+  "name": "gradera-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "prisma generate && tsc -p tsconfig.build.json",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "prisma generate && tsc --noEmit",
+    "lint": "eslint src --ext .ts --quiet",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.5.0",
+    "@proto-platform/contracts": "workspace:*",
+    "@proto-platform/domain": "workspace:*",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "jose": "^6.0.11",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.13.5",
+    "@types/supertest": "^6.0.2",
+    "prisma": "^6.5.0",
+    "supertest": "^7.0.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "vitest": "^3.2.4"
+  }
+}
