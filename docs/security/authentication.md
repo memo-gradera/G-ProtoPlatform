@@ -44,7 +44,7 @@ The API validates:
 | Check | Source |
 |-------|--------|
 | Signature | Microsoft JWKS (`/discovery/v2.0/keys`) |
-| Issuer | `https://login.microsoftonline.com/{AZURE_TENANT_ID}/v2.0` |
+| Issuer | Either `https://login.microsoftonline.com/{AZURE_TENANT_ID}/v2.0` **or** `https://sts.windows.net/{AZURE_TENANT_ID}/` (Entra may emit either format depending on token version/configuration) |
 | Audience | `JWT_AUDIENCE` env var |
 | Tenant | `tid` claim === `AZURE_TENANT_ID` |
 | Expiry | `exp` / `nbf` (30s clock tolerance) |

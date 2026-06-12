@@ -138,6 +138,13 @@ describe("validateIdeaTransition domain rules", () => {
     const result = validateIdeaTransition("approved", "in_progress", {});
     expect(result.valid).toBe(false);
   });
+
+  it("allows ready_for_demo to in_progress for needs revision", () => {
+    const result = validateIdeaTransition("ready_for_demo", "in_progress", {
+      reason: "needs_revision",
+    });
+    expect(result.valid).toBe(true);
+  });
 });
 
 describe("RBAC canPerformAction", () => {

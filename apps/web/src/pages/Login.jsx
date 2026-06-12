@@ -1,9 +1,15 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
-import { loginWithMicrosoft } from "@/auth/tokenProvider";
+import React, { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { getBase44Client } from "@/api/base44Client";
+import {
+  isMsalInteractionInProgress,
+  loginWithMicrosoft,
+  logoutFromMicrosoft,
+} from "@/auth/tokenProvider";
+import { shouldRedirectAuthenticatedUserFromLogin } from "@/auth/msalAuthFlow";
 import { clearDevBypassLoggedOut, isDevAuthBypassEnabled } from "@/lib/devUser";
 import { isMsalAuthMode } from "@/lib/authMode";
+import { logAuthLifecycle } from "@/lib/authLifecycleLog";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,13 +21,55 @@ import GoogleIcon from "@/components/GoogleIcon";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { checkUserAuth } = useAuth();
+  const location = useLocation();
+  const {
+    user,
+    isAuthenticated,
+    isLoadingAuth,
+    authChecked,
+    checkUserAuth,
+    authError,
+    clearAuthError,
+    logout,
+  } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const devBypass = isDevAuthBypassEnabled();
   const msalAuth = isMsalAuthMode();
+
+  useEffect(() => {
+    if (
+      shouldRedirectAuthenticatedUserFromLogin({
+        pathname: location.pathname,
+        isAuthenticated,
+        hasUser: Boolean(user),
+      }) &&
+      !isLoadingAuth &&
+      authChecked
+    ) {
+      logAuthLifecycle("Login redirect to dashboard", {
+        email: user?.email,
+      });
+      navigate("/", { replace: true });
+    }
+  }, [
+    location.pathname,
+    isAuthenticated,
+    user,
+    isLoadingAuth,
+    authChecked,
+    navigate,
+  ]);
+
+  useEffect(() => {
+    if (authError?.message) {
+      setError(authError.message);
+    } else if (!authError) {
+      setError("");
+    }
+  }, [authError]);
 
   const handleDevContinue = async () => {
     clearDevBypassLoggedOut();
@@ -34,7 +82,11 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      await base44.auth.loginViaEmailPassword(email, password);
+      const client = getBase44Client();
+      if (!client) {
+        throw new Error("BASE44 login is not available in the current auth mode.");
+      }
+      await client.auth.loginViaEmailPassword(email, password);
       window.location.href = "/";
     } catch (err) {
       setError(err.message || "Invalid email or password");
@@ -44,11 +96,19 @@ export default function Login() {
   };
 
   const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", "/");
+    const client = getBase44Client();
+    if (client) {
+      client.auth.loginWithProvider("google", "/");
+    }
   };
 
   const handleMicrosoft = async () => {
+    if (loading || isMsalInteractionInProgress()) {
+      return;
+    }
+
     setError("");
+    clearAuthError?.();
     setLoading(true);
     try {
       await loginWithMicrosoft();
@@ -57,6 +117,28 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  const handleSignOutAndRetry = async () => {
+    setError("");
+    clearAuthError?.();
+    setLoading(true);
+    try {
+      logout(false);
+      await logoutFromMicrosoft();
+    } catch (err) {
+      setError(err.message || "Sign out failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const showMsalSpinner = msalAuth && (isLoadingAuth || !authChecked);
+  const showRetryButton =
+    msalAuth &&
+    authError &&
+    (authError.type === "auth_required" ||
+      authError.type === "user_not_registered" ||
+      authError.type === "unknown");
 
   return (
     <AuthLayout
@@ -87,16 +169,24 @@ export default function Login() {
 
       {msalAuth ? (
         <>
+          {showMsalSpinner && (
+            <div className="mb-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Completing Microsoft sign-in...
+            </div>
+          )}
+
           {error && (
             <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
               {error}
             </div>
           )}
+
           <Button
             type="button"
             className="w-full h-12 text-sm font-medium"
             onClick={handleMicrosoft}
-            disabled={loading}
+            disabled={loading || showMsalSpinner || isMsalInteractionInProgress()}
           >
             {loading ? (
               <>
@@ -107,6 +197,18 @@ export default function Login() {
               "Sign in with Microsoft"
             )}
           </Button>
+
+          {showRetryButton && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-12 text-sm font-medium mt-3"
+              onClick={handleSignOutAndRetry}
+              disabled={loading}
+            >
+              Sign out and retry
+            </Button>
+          )}
         </>
       ) : (
         <>

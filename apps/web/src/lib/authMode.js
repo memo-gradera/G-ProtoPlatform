@@ -19,6 +19,11 @@ export function resolveAuthMode() {
   return 'base44';
 }
 
+/** Alias for startup logging and diagnostics */
+export function getAuthProvider() {
+  return resolveAuthMode();
+}
+
 export function isLocalAuthMode() {
   return resolveAuthMode() === 'local';
 }

@@ -18,13 +18,286 @@ export function fromApiPrototypeStatus(status) {
   return status;
 }
 
+/**
+ * @param {string | { full_name?: string, fullName?: string, email?: string } | null | undefined} owner
+ */
+export function formatIdeaOwnerDisplay(owner) {
+  if (owner == null || owner === '') {
+    return 'Unassigned';
+  }
+
+  if (typeof owner === 'string') {
+    return owner;
+  }
+
+  if (typeof owner === 'object') {
+    return owner.full_name || owner.fullName || owner.email || 'Unassigned';
+  }
+
+  return String(owner);
+}
+
+/** Alias for idea/prototype/review owner display. */
+export const formatOwnerDisplay = formatIdeaOwnerDisplay;
+
+export function normalizeOwnerFields(entity) {
+  const ownerObject =
+    typeof entity.owner === 'object' && entity.owner !== null ? entity.owner : null;
+
+  const ownerId = ownerObject?.id ?? entity.owner_id ?? null;
+  const ownerEmail = ownerObject?.email ?? entity.owner_email ?? null;
+  const ownerName =
+    ownerObject?.full_name ??
+    ownerObject?.fullName ??
+    entity.owner_name ??
+    null;
+
+  const owner =
+    typeof entity.owner === 'string'
+      ? entity.owner
+      : formatOwnerDisplay(ownerObject);
+
+  return {
+    owner_id: ownerId,
+    owner_email: ownerEmail,
+    owner_name: ownerName,
+    owner,
+  };
+}
+
+export function normalizeIdeaOwnerFields(idea) {
+  return normalizeOwnerFields(idea);
+}
+
+export function normalizePrototypeOwnerFields(prototype) {
+  return normalizeOwnerFields(prototype);
+}
+
+export function normalizeRelatedIdeaFields(entity) {
+  const relatedObject =
+    typeof entity.related_idea === 'object' && entity.related_idea !== null
+      ? entity.related_idea
+      : null;
+
+  const relatedIdeaId = relatedObject?.id ?? entity.related_idea_id ?? null;
+  const relatedIdeaName =
+    relatedObject?.solution_name ??
+    relatedObject?.solutionName ??
+    entity.related_idea_name ??
+    entity.related_idea_solution_name ??
+    null;
+
+  const relatedIdea =
+    typeof entity.related_idea === 'string'
+      ? entity.related_idea
+      : relatedIdeaName;
+
+  return {
+    related_idea_id: relatedIdeaId,
+    related_idea_name: relatedIdeaName,
+    related_idea_solution_name: relatedIdeaName,
+    related_idea: relatedIdea,
+  };
+}
+
+export function getIdeaOwnerLabel(idea) {
+  if (!idea) return 'Unassigned';
+  return formatOwnerDisplay(idea.owner ?? idea.owner_name ?? idea.owner_email);
+}
+
+export function getPrototypeOwnerLabel(prototype) {
+  if (!prototype) return 'Unassigned';
+  return formatOwnerDisplay(
+    prototype.owner ?? prototype.owner_name ?? prototype.owner_email,
+  );
+}
+
+export function getPrototypeRelatedIdeaLabel(prototype) {
+  if (!prototype) return '';
+  if (typeof prototype.related_idea === 'string') {
+    return prototype.related_idea;
+  }
+  return (
+    prototype.related_idea_name ??
+    prototype.related_idea_solution_name ??
+    prototype.related_idea?.solution_name ??
+    prototype.related_idea?.solutionName ??
+    ''
+  );
+}
+
+export function mergePrototypeForm(prototype, emptyPrototype = {}) {
+  if (!prototype) return { ...emptyPrototype };
+
+  return {
+    ...emptyPrototype,
+    ...prototype,
+    ...normalizeOwnerFields(prototype),
+    ...normalizeRelatedIdeaFields(prototype),
+    tags: prototype.tags || [],
+  };
+}
+
+const API_IDEA_CREATE_FIELDS = new Set([
+  'solution_name',
+  'description',
+  'why_it_matters',
+  'target_user',
+  'minimum_viable_functionality',
+  'value_hypothesis',
+  'success_criteria',
+  'acceptance_criteria',
+  'owner_id',
+  'priority',
+  'eta_date',
+]);
+
+const API_IDEA_UPDATE_FIELDS = new Set([
+  ...API_IDEA_CREATE_FIELDS,
+  'prototype_url',
+  'demo_notes',
+  'decision_notes',
+]);
+
+const FRONTEND_TO_API_IDEA_FIELDS = {
+  short_description: 'description',
+  eta: 'eta_date',
+  minimum_viability: 'minimum_viable_functionality',
+  what_makes_it_unique: 'value_hypothesis',
+};
+
+export function mapPriorityForApi(priority) {
+  if (priority === 'critical') return 'urgent';
+  return priority;
+}
+
+export function normalizeEtaDateForApi(value) {
+  if (value == null || String(value).trim() === '') {
+    return undefined;
+  }
+
+  const trimmed = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  const date = new Date(trimmed);
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
+
+  return date.toISOString().slice(0, 10);
+}
+
+function buildMappedIdeaSource(form = {}) {
+  const source = { ...form };
+
+  if (source.short_description != null && source.description == null) {
+    source.description = source.short_description;
+  }
+  if (source.eta != null && source.eta_date == null) {
+    source.eta_date = normalizeEtaDateForApi(source.eta);
+  }
+  if (source.minimum_viability && !source.minimum_viable_functionality) {
+    source.minimum_viable_functionality = source.minimum_viability;
+  }
+  if (source.what_makes_it_unique && !source.value_hypothesis) {
+    source.value_hypothesis = source.what_makes_it_unique;
+  }
+
+  return source;
+}
+
+/**
+ * Maps frontend idea form data to API create payload (strict schema safe).
+ * @param {Record<string, unknown>} form
+ */
+export function mapIdeaFormToApiCreatePayload(form = {}) {
+  return mapIdeaFormToApiPayload(form, API_IDEA_CREATE_FIELDS, { omitEmpty: true });
+}
+
+/**
+ * Maps frontend idea form data to API PATCH payload (strict schema safe).
+ * @param {Record<string, unknown>} form
+ */
+export function mapIdeaFormToApiUpdatePayload(form = {}) {
+  return mapIdeaFormToApiPayload(form, API_IDEA_UPDATE_FIELDS, { omitEmpty: false });
+}
+
+function mapIdeaFormToApiPayload(form, allowedFields, { omitEmpty }) {
+  const source = buildMappedIdeaSource(form);
+  const payload = {};
+
+  for (const [key, value] of Object.entries(source)) {
+    if (key === 'status') continue;
+
+    const apiKey = FRONTEND_TO_API_IDEA_FIELDS[key] ?? key;
+    if (!allowedFields.has(apiKey)) continue;
+    if (value === undefined) continue;
+
+    if (apiKey === 'priority') {
+      if (value === '' && omitEmpty) continue;
+      payload.priority = mapPriorityForApi(String(value));
+      continue;
+    }
+
+    if (apiKey === 'eta_date') {
+      const normalizedDate = normalizeEtaDateForApi(value);
+      if (!normalizedDate) {
+        if (!omitEmpty && value === '') {
+          payload.eta_date = null;
+        }
+        continue;
+      }
+      payload.eta_date = normalizedDate;
+      continue;
+    }
+
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed === '' && omitEmpty) continue;
+      payload[apiKey] = trimmed === '' ? null : trimmed;
+      continue;
+    }
+
+    payload[apiKey] = value;
+  }
+
+  delete payload.status;
+  return payload;
+}
+
+export function formatHistoryChangedBy(changedBy) {
+  if (changedBy == null || changedBy === '') {
+    return 'System';
+  }
+
+  if (typeof changedBy === 'string') {
+    return changedBy;
+  }
+
+  if (typeof changedBy === 'object') {
+    return (
+      changedBy.full_name ||
+      changedBy.fullName ||
+      changedBy.email ||
+      'System'
+    );
+  }
+
+  return String(changedBy);
+}
+
 export function normalizeIdea(idea) {
   if (!idea) return idea;
   return {
     ...idea,
+    ...normalizeIdeaOwnerFields(idea),
     status: fromApiIdeaStatus(idea.status),
     created_date: idea.created_date ?? idea.created_at,
     updated_date: idea.updated_date ?? idea.updated_at,
+    short_description: idea.short_description ?? idea.description ?? '',
+    eta: idea.eta ?? idea.eta_date ?? '',
   };
 }
 
@@ -32,9 +305,15 @@ export function normalizePrototype(prototype) {
   if (!prototype) return prototype;
   return {
     ...prototype,
+    ...normalizePrototypeOwnerFields(prototype),
+    ...normalizeRelatedIdeaFields(prototype),
     status: fromApiPrototypeStatus(prototype.status),
     created_date: prototype.created_date ?? prototype.created_at,
     updated_date: prototype.updated_date ?? prototype.updated_at,
+    tags:
+      prototype.tags ??
+      prototype.tag_maps?.map((entry) => entry.tag?.name).filter(Boolean) ??
+      [],
   };
 }
 
@@ -45,6 +324,7 @@ export function normalizeHistoryEntry(entry) {
     previous_status: fromApiIdeaStatus(entry.previous_status),
     new_status: fromApiIdeaStatus(entry.new_status),
     metadata: entry.metadata ?? entry.metadata_json,
+    changed_by: formatHistoryChangedBy(entry.changed_by),
   };
 }
 
@@ -108,6 +388,28 @@ export function buildTransitionPayload(targetStatus, context = {}) {
 
 export function normalizeReview(review) {
   if (!review) return review;
+
+  const reviewerFields =
+    review.reviewer && typeof review.reviewer === 'object'
+      ? normalizeOwnerFields({
+          owner: review.reviewer,
+          owner_id: review.reviewer_id,
+        })
+      : null;
+
+  const ideaFields =
+    review.idea && typeof review.idea === 'object'
+      ? normalizeRelatedIdeaFields({
+          related_idea: review.idea,
+          related_idea_id: review.idea_id,
+        })
+      : null;
+
+  const prototypeName =
+    typeof review.prototype === 'string'
+      ? review.prototype
+      : review.prototype?.name ?? review.prototype_name ?? null;
+
   return {
     id: review.id,
     prototype_id: review.prototype_id,
@@ -118,5 +420,12 @@ export function normalizeReview(review) {
     rejection_reason: review.rejection_reason,
     created_at: review.created_at,
     created_date: review.created_date ?? review.created_at,
+    reviewer_name: reviewerFields?.owner_name ?? null,
+    reviewer_email: reviewerFields?.owner_email ?? null,
+    reviewer: reviewerFields?.owner ?? review.reviewer ?? null,
+    idea_name: ideaFields?.related_idea_name ?? null,
+    idea: ideaFields?.related_idea ?? review.idea ?? null,
+    prototype_name: prototypeName,
+    prototype: prototypeName,
   };
 }

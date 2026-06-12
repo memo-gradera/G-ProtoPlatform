@@ -1,5 +1,6 @@
-import { base44 } from '@/api/base44Client';
+import { getBase44Client } from '@/api/base44Client';
 import { ROLES } from '@/domain/rbac';
+import { isMsalAuthMode } from '@/lib/authMode';
 import { devDataStore, isDevDataBypassEnabled } from '@/lib/devDataStore';
 import { isApiBackendEnabled } from '@/services/backendMode';
 import { apiClient } from '@/services/apiClient';
@@ -15,7 +16,13 @@ export const usersService = {
       const profile = await apiClient.get('/users/me');
       return normalizeApiUser(profile);
     }
-    const authUser = await base44.auth.me();
+
+    const client = getBase44Client();
+    if (!client) {
+      return null;
+    }
+
+    const authUser = await client.auth.me();
     return this.enrichAuthUserWithRole(authUser);
   },
 
@@ -26,7 +33,11 @@ export const usersService = {
     if (isApiBackendEnabled()) {
       return apiClient.get('/users').then((users) => users.map(normalizeApiUser));
     }
-    return base44.entities.User.list();
+    const client = getBase44Client();
+    if (!client) {
+      return Promise.resolve([]);
+    }
+    return client.entities.User.list();
   },
 
   /**
@@ -77,6 +88,19 @@ export const usersService = {
    */
   async enrichAuthUserWithRole(authUser) {
     if (!authUser) return null;
+
+    if (isMsalAuthMode() || isApiBackendEnabled()) {
+      if (authUser.role && ROLES.includes(authUser.role)) {
+        return authUser;
+      }
+      try {
+        const profile = await this.me();
+        return profile ?? { ...authUser, role: 'viewer' };
+      } catch {
+        return { ...authUser, role: 'viewer' };
+      }
+    }
+
     if (authUser.role && ROLES.includes(authUser.role)) {
       return authUser;
     }
@@ -99,6 +123,10 @@ export const usersService = {
       const updated = await apiClient.patch(`/users/${id}/role`, { role });
       return normalizeApiUser(updated);
     }
-    return base44.entities.User.update(id, { role });
+    const client = getBase44Client();
+    if (!client) {
+      throw new Error('User management is unavailable in the current backend mode.');
+    }
+    return client.entities.User.update(id, { role });
   },
 };

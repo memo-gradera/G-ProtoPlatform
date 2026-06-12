@@ -16,7 +16,7 @@ export const IDEA_STATUSES = Object.freeze([
 export const ALLOWED_TRANSITIONS = Object.freeze({
   ideas: ['in_progress', 'blocked', 'rejected'],
   in_progress: ['ready_for_demo', 'blocked', 'rejected'],
-  ready_for_demo: ['approved', 'blocked', 'rejected'],
+  ready_for_demo: ['approved', 'blocked', 'rejected', 'in_progress'],
   blocked: ['in_progress'],
   approved: [],
   rejected: ['ideas'],

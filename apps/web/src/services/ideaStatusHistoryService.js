@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { getBase44Client } from '@/api/base44Client';
 import { normalizeStatus } from '@/domain/ideaWorkflow';
 import { devDataStore, isDevDataBypassEnabled } from '@/lib/devDataStore';
 import { createDevUser, isDevAuthBypassEnabled } from '@/lib/devUser';
@@ -66,8 +66,13 @@ async function resolveChangedBy(metadata = {}) {
     return user?.email || user?.id || user?.full_name || 'unknown';
   }
 
+  const client = getBase44Client();
+  if (!client) {
+    return 'unknown';
+  }
+
   try {
-    const user = await base44.auth.me();
+    const user = await client.auth.me();
     return user?.email || user?.id || user?.full_name || 'unknown';
   } catch {
     return 'unknown';
@@ -83,7 +88,11 @@ export const ideaStatusHistoryService = {
     if (isApiBackendEnabled()) {
       return Promise.resolve([]);
     }
-    return base44.entities.IdeaStatusHistory.list(sort, limit);
+    const client = getBase44Client();
+    if (!client) {
+      return Promise.resolve([]);
+    }
+    return client.entities.IdeaStatusHistory.list(sort, limit);
   },
 
   async listByIdea(ideaId, options = {}) {
@@ -139,7 +148,12 @@ export const ideaStatusHistoryService = {
       return devDataStore.createHistoryEntry(payload);
     }
 
-    return base44.entities.IdeaStatusHistory.create(payload);
+    const client = getBase44Client();
+    if (!client) {
+      return null;
+    }
+
+    return client.entities.IdeaStatusHistory.create(payload);
   },
 
   isReadyForDemoStatus(status) {

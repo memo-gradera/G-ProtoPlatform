@@ -12,6 +12,7 @@ import PrototypeFormDialog from '@/components/prototypes/PrototypeFormDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getPrototypeOwnerLabel } from '@/services/apiMappers';
 import { Plus, Search } from 'lucide-react';
 
 function handleSaveError(error) {
@@ -63,7 +64,7 @@ export default function PrototypeCatalog() {
 
   const filtered = prototypes.filter(p => {
     const matchesSearch = !search || p.name?.toLowerCase().includes(search.toLowerCase()) ||
-      p.owner?.toLowerCase().includes(search.toLowerCase());
+      getPrototypeOwnerLabel(p).toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
     return matchesSearch && matchesStatus;
   });

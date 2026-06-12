@@ -1,17 +1,19 @@
 import type { Prisma, PrototypeStatus } from "../db/client.js";
 import { prisma } from "../db/client.js";
 
+const prototypeRelations = {
+  owner: true,
+  relatedIdea: true,
+  tagMaps: { include: { tag: true } },
+} as const;
+
 export const prototypesRepository = {
   async list(options?: { status?: PrototypeStatus; limit?: number }) {
     return prisma.prototype.findMany({
       where: options?.status ? { status: options.status } : undefined,
       orderBy: { createdAt: "desc" },
       take: options?.limit ?? 500,
-      include: {
-        owner: true,
-        relatedIdea: true,
-        tagMaps: { include: { tag: true } },
-      },
+      include: prototypeRelations,
     });
   },
 
@@ -19,9 +21,7 @@ export const prototypesRepository = {
     return prisma.prototype.findUnique({
       where: { id },
       include: {
-        owner: true,
-        relatedIdea: true,
-        tagMaps: { include: { tag: true } },
+        ...prototypeRelations,
         reviews: true,
       },
     });
@@ -42,7 +42,7 @@ export const prototypesRepository = {
     return prisma.$transaction(async (tx) => {
       const prototype = await tx.prototype.create({
         data,
-        include: { owner: true, relatedIdea: true },
+        include: prototypeRelations,
       });
 
       await tx.auditEvent.create({
@@ -70,7 +70,7 @@ export const prototypesRepository = {
       const prototype = await tx.prototype.update({
         where: { id },
         data,
-        include: { owner: true, relatedIdea: true },
+        include: prototypeRelations,
       });
 
       await tx.auditEvent.create({

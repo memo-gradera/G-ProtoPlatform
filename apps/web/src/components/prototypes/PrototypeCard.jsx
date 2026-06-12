@@ -2,6 +2,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { getPrototypeOwnerLabel } from '@/services/apiMappers';
 import { User, ExternalLink, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -69,7 +70,7 @@ export default function PrototypeCard({ prototype, onClick }) {
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/40">
           <div className="flex items-center gap-1.5">
             <User className="w-3 h-3" />
-            <span>{prototype.owner}</span>
+            <span>{getPrototypeOwnerLabel(prototype)}</span>
           </div>
           {prototype.created_date && (
             <div className="flex items-center gap-1">

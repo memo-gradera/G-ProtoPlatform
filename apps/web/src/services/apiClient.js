@@ -1,5 +1,6 @@
 import { getApiBaseUrl } from '@/auth/msalConfig';
 import { acquireAccessToken } from '@/auth/tokenProvider';
+import { logUsersMeRequestDiagnostics } from '@/auth/jwtDebug';
 
 export class ApiClientError extends Error {
   /**
@@ -75,6 +76,14 @@ export async function apiRequest(method, path, options = {}) {
   }
 
   const url = `${getApiBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`;
+
+  if (path.includes('/users/me')) {
+    logUsersMeRequestDiagnostics({
+      apiUrl: url,
+      authorizationHeaderPresent: Boolean(token),
+      accessToken: token,
+    });
+  }
 
   let response;
   try {

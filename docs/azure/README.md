@@ -11,6 +11,7 @@ Planning and deployment documentation for Azure hosting. **No resources are prov
 | [app-registrations.md](./app-registrations.md) | Entra SPA + API registrations |
 | [secrets-and-config.md](./secrets-and-config.md) | Env vars and future GitHub secrets |
 | [deployment-strategy.md](./deployment-strategy.md) | Promotion path and planned CI/CD stages |
+| [github-actions.md](./github-actions.md) | CI workflows, OIDC, secrets, and deploy order |
 | [cost-estimate.md](./cost-estimate.md) | Monthly cost scenarios |
 
 ## Infrastructure as Code
@@ -29,4 +30,5 @@ Terraform scaffold: [../../infra/azure/README.md](../../infra/azure/README.md)
 | Architecture docs | ✅ This folder |
 | Terraform scaffold | ✅ `infra/azure/` |
 | Azure provisioning | ⏳ Not started |
-| GitHub Actions | ⏳ Documented only |
+| GitHub Actions CI | ✅ `.github/workflows/ci.yml` |
+| GitHub Actions deploy (dev) | ✅ Manual workflow scaffold; Azure resources required |

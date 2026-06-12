@@ -13,6 +13,7 @@ import { filesService } from '@/services/filesService';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/components/ui/use-toast';
 import { Upload, X } from 'lucide-react';
+import { mergePrototypeForm } from '@/services/apiMappers';
 
 const STATUS_OPTIONS = [
   { value: 'draft', label: 'Draft' },
@@ -52,7 +53,7 @@ export default function PrototypeFormDialog({ open, onClose, onSave, prototype, 
 
   useEffect(() => {
     if (prototype) {
-      setForm({ ...emptyProto, ...prototype, tags: prototype.tags || [] });
+      setForm(mergePrototypeForm(prototype, emptyProto));
     } else {
       setForm(emptyProto);
     }

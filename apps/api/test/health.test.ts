@@ -40,6 +40,44 @@ describe("GET /health", () => {
       environment: "test",
     });
   });
+
+  it("returns 200 without auth when DEV_AUTH_BYPASS=false", async () => {
+    const env = loadEnv({
+      ...process.env,
+      NODE_ENV: "test",
+      PORT: "3001",
+      DEV_AUTH_BYPASS: "false",
+    });
+    const app = createApp(env);
+
+    const response = await request(app).get("/health");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      status: "ok",
+      service: "gradera-api",
+    });
+  });
+});
+
+describe("GET /api/users/me", () => {
+  it("returns 401 without Bearer token when DEV_AUTH_BYPASS=false", async () => {
+    const env = loadEnv({
+      ...process.env,
+      NODE_ENV: "test",
+      PORT: "3001",
+      DEV_AUTH_BYPASS: "false",
+    });
+    const app = createApp(env);
+
+    const response = await request(app).get("/api/users/me");
+
+    expect(response.status).toBe(401);
+    expect(response.body).toMatchObject({
+      error: "UNAUTHORIZED",
+      message: "Authentication required.",
+    });
+  });
 });
 
 describe("GET /api/ideas", () => {

@@ -13,8 +13,9 @@ import { isApiBackendEnabled } from '@/services/backendMode';
 import { apiClient } from '@/services/apiClient';
 import {
   buildTransitionPayload,
+  mapIdeaFormToApiCreatePayload,
+  mapIdeaFormToApiUpdatePayload,
   normalizeIdea,
-  toApiIdeaStatus,
 } from '@/services/apiMappers';
 
 const DEFAULT_SORT = '-created_date';
@@ -27,13 +28,14 @@ function stripStatus(payload = {}) {
   return rest;
 }
 
-function mapIdeaPayloadForApi(payload = {}) {
-  const mapped = { ...payload };
-  if (mapped.status != null) {
-    mapped.status = toApiIdeaStatus(mapped.status);
-  }
-  return mapped;
-}
+const WORKFLOW_PATCH_KEYS = new Set([
+  'blocker_reason',
+  'rejection_reason',
+  'prototype_url',
+  'demo_notes',
+  'decision_notes',
+  'reason',
+]);
 
 /**
  * Persists non-status idea fields. Status changes must use transitionStatus/moveStage.
@@ -66,7 +68,10 @@ export const ideasService = {
       return devDataStore.createIdea(payload);
     }
     if (isApiBackendEnabled()) {
-      const created = await apiClient.post('/ideas', mapIdeaPayloadForApi(payload));
+      const created = await apiClient.post(
+        '/ideas',
+        mapIdeaFormToApiCreatePayload(payload),
+      );
       return normalizeIdea(created);
     }
     return base44.entities.Idea.create(payload);
@@ -90,7 +95,7 @@ export const ideasService = {
     if (isApiBackendEnabled()) {
       const updated = await apiClient.patch(
         `/ideas/${id}`,
-        mapIdeaPayloadForApi(payload),
+        mapIdeaFormToApiUpdatePayload(payload),
       );
       return normalizeIdea(updated);
     }
@@ -174,7 +179,22 @@ export const ideasService = {
     const patch = trimWorkflowContext(stripStatus(formData));
 
     if (originalIdea?.status != null && nextStatus !== originalIdea.status) {
-      return this.transitionStatus(id, nextStatus, { patch });
+      const transitioned = await this.transitionStatus(id, nextStatus, { patch });
+
+      if (!isApiBackendEnabled()) {
+        return transitioned;
+      }
+
+      const fieldUpdates = mapIdeaFormToApiUpdatePayload(patch);
+      const nonWorkflowUpdates = Object.fromEntries(
+        Object.entries(fieldUpdates).filter(([key]) => !WORKFLOW_PATCH_KEYS.has(key)),
+      );
+
+      if (Object.keys(nonWorkflowUpdates).length === 0) {
+        return transitioned;
+      }
+
+      return this.update(id, patch);
     }
 
     return this.update(id, patch);

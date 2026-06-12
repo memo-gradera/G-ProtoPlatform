@@ -17,7 +17,13 @@ const METADATA_LABELS = {
 };
 
 function parseMetadata(metadata) {
-  if (!metadata || typeof metadata !== 'string') return null;
+  if (!metadata) return null;
+
+  if (typeof metadata === 'object') {
+    return metadata;
+  }
+
+  if (typeof metadata !== 'string') return null;
   try {
     const parsed = JSON.parse(metadata);
     return typeof parsed === 'object' && parsed !== null ? parsed : null;

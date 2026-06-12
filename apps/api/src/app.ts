@@ -11,17 +11,18 @@ export function createApp(env: Env) {
   const app = express();
 
   app.disable("x-powered-by");
-  app.use(createRequestLogger(env));
+  app.use(express.json({ limit: "1mb" }));
   app.use(
     cors({
       origin: env.CORS_ORIGIN.split(",").map((value) => value.trim()),
       credentials: true,
     }),
   );
-  app.use(express.json({ limit: "1mb" }));
-  app.use(createAuthMiddleware(env));
+  app.use(createRequestLogger(env));
 
   app.use(createHealthRouter(env));
+
+  app.use("/api", createAuthMiddleware(env));
   app.use("/api", createApiRouter());
 
   app.use(notFoundHandler);

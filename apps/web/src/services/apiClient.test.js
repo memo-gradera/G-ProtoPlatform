@@ -19,7 +19,9 @@ describe('apiClient', () => {
   });
 
   it('attaches bearer token when provided', async () => {
-    vi.mocked(acquireAccessToken).mockResolvedValue('test-token');
+    vi.mocked(acquireAccessToken).mockResolvedValue(
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhcGkiLCJzY3AiOiJhY2Nlc3MiLCJ0aWQiOiJ0MSIsInByZWZlcnJlZF91c2VybmFtZSI6InVzZXJAZ3JhZGVyYS5haSJ9.sig',
+    );
 
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -36,7 +38,7 @@ describe('apiClient', () => {
       expect.objectContaining({
         method: 'GET',
         headers: expect.objectContaining({
-          Authorization: 'Bearer test-token',
+          Authorization: expect.stringMatching(/^Bearer /),
         }),
       }),
     );

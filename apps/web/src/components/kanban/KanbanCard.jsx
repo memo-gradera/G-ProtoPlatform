@@ -1,10 +1,14 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { StatusBadge, PriorityBadge } from '@/components/shared/StatusBadge';
+import { getIdeaOwnerLabel } from '@/services/apiMappers';
 import { User, Calendar, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function KanbanCard({ idea, onClick, provided, isDragging }) {
+  const ownerLabel = getIdeaOwnerLabel(idea);
+  const etaValue = idea.eta || idea.eta_date;
+
   return (
     <div
       ref={provided.innerRef}
@@ -33,13 +37,13 @@ export default function KanbanCard({ idea, onClick, provided, isDragging }) {
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <User className="w-3 h-3" />
-            <span className="truncate max-w-[100px]">{idea.owner}</span>
+            <span className="truncate max-w-[100px]">{ownerLabel}</span>
           </div>
           <div className="flex items-center gap-2">
-            {idea.eta && (
+            {etaValue && (
               <div className="flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
-                <span>{format(new Date(idea.eta), 'MMM d')}</span>
+                <span>{format(new Date(etaValue), 'MMM d')}</span>
               </div>
             )}
             {idea.prototype_url && (

@@ -22,7 +22,7 @@ import RejectedArchive from '@/pages/RejectedArchive';
 import AdminSettings from '@/pages/AdminSettings';
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError } = useAuth();
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
@@ -33,13 +33,8 @@ const AuthenticatedApp = () => {
     );
   }
 
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError message={authError.message} />;
-    } else if (authError.type === 'auth_required') {
-      navigateToLogin();
-      return null;
-    }
+  if (authError?.type === 'user_not_registered') {
+    return <UserNotRegisteredError message={authError.message} />;
   }
 
   return (

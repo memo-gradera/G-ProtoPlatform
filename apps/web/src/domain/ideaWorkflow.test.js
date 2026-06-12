@@ -24,6 +24,16 @@ describe('ideaWorkflow', () => {
 
     it('normalizes ready_4_demo storage status', () => {
       expect(getAllowedTransitions('ready_4_demo')).toContain('approved');
+      expect(getAllowedTransitions('ready_4_demo')).toContain('in_progress');
+    });
+
+    it('allows ready_for_demo → in_progress for needs revision', () => {
+      expect(canTransition('ready_4_demo', 'in_progress')).toBe(true);
+      expect(
+        validateTransition('ready_4_demo', 'in_progress', {
+          reason: 'needs_revision',
+        }),
+      ).toEqual({ valid: true });
     });
   });
 

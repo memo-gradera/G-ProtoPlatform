@@ -58,10 +58,18 @@ export function getEntraIssuer(tenantId: string): string {
   return `https://login.microsoftonline.com/${tenantId}/v2.0`;
 }
 
+/** Both issuer formats Entra may emit depending on token version/configuration. */
+export function getEntraIssuers(tenantId: string): string[] {
+  return [
+    getEntraIssuer(tenantId),
+    `https://sts.windows.net/${tenantId}/`,
+  ];
+}
+
 export function assertEntraConfig(env: Env): {
   tenantId: string;
   audience: string;
-  issuer: string;
+  issuers: string[];
 } {
   if (!env.AZURE_TENANT_ID || !env.JWT_AUDIENCE) {
     throw new Error(
@@ -72,6 +80,6 @@ export function assertEntraConfig(env: Env): {
   return {
     tenantId: env.AZURE_TENANT_ID,
     audience: env.JWT_AUDIENCE,
-    issuer: getEntraIssuer(env.AZURE_TENANT_ID),
+    issuers: getEntraIssuers(env.AZURE_TENANT_ID),
   };
 }

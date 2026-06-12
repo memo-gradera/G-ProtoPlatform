@@ -19,6 +19,11 @@ export function resolveBackendMode() {
   return 'base44';
 }
 
+/** Alias for startup logging and diagnostics */
+export function getBackendProvider() {
+  return resolveBackendMode();
+}
+
 export function isApiBackendEnabled() {
   return resolveBackendMode() === 'api';
 }

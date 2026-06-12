@@ -1,4 +1,3 @@
-import { base44 } from '@/api/base44Client';
 import { devDataStore, isDevDataBypassEnabled } from '@/lib/devDataStore';
 import { isApiBackendEnabled, isBase44BackendEnabled } from '@/services/backendMode';
 import { apiClient } from '@/services/apiClient';

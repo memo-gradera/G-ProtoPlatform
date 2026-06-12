@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
 import { RbacError, WorkflowValidationError } from "@proto-platform/domain";
-import { AppError } from "../errors.js";
+import { AppError, UnauthorizedError } from "../errors.js";
 
 export function errorHandler(
   err: unknown,
@@ -12,11 +12,21 @@ export function errorHandler(
   const requestId = req.requestId ?? "unknown";
 
   if (err instanceof AppError) {
-    res.status(err.statusCode).json({
+    const body: Record<string, unknown> = {
       error: err.code,
       message: err.message,
       requestId,
-    });
+    };
+
+    if (
+      process.env.NODE_ENV !== "production" &&
+      err instanceof UnauthorizedError &&
+      err.validationReason
+    ) {
+      body.reason = err.validationReason;
+    }
+
+    res.status(err.statusCode).json(body);
     return;
   }
 

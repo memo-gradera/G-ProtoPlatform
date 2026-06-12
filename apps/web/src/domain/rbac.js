@@ -103,12 +103,28 @@ export function canAccessRoute(user, route) {
   return allowedRoles.includes(getUserRole(user));
 }
 
+import { getIdeaOwnerLabel } from '@/services/apiMappers';
+
 function matchesOwner(user, idea) {
-  if (!user || !idea?.owner) return false;
-  const owner = String(idea.owner).toLowerCase().trim();
+  if (!user || !idea) return false;
+
   const email = user.email?.toLowerCase()?.trim();
   const name = user.full_name?.toLowerCase()?.trim();
-  return owner === email || owner === name;
+  const ownerId = idea.owner_id;
+  const ownerEmail = idea.owner_email?.toLowerCase()?.trim();
+  const ownerName = idea.owner_name?.toLowerCase()?.trim();
+  const ownerDisplay = getIdeaOwnerLabel(idea).toLowerCase().trim();
+
+  if (ownerId && user.id && ownerId === user.id) {
+    return true;
+  }
+
+  return (
+    ownerDisplay === email ||
+    ownerDisplay === name ||
+    ownerEmail === email ||
+    ownerName === name
+  );
 }
 
 function canEditIdea(user, idea) {

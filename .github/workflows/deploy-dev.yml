@@ -1,0 +1,99 @@
+name: Deploy Dev
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_migrations:
+        description: Run Prisma migrate deploy before API deployment
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  deploy-dev:
+    name: Deploy to Azure (dev)
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build domain package
+        run: pnpm --filter @proto-platform/domain build
+
+      - name: Test web app
+        run: pnpm --filter gradera-innovation-hub test
+
+      - name: Test API
+        run: pnpm --filter gradera-api test
+
+      - name: Build API
+        run: pnpm --filter gradera-api build
+
+      - name: Build web app
+        env:
+          VITE_AUTH_PROVIDER: msal
+          VITE_BACKEND_PROVIDER: api
+          VITE_DEV_AUTH_BYPASS: "false"
+          VITE_DEV_DATA_BYPASS: "false"
+          VITE_AZURE_TENANT_ID: ${{ vars.VITE_AZURE_TENANT_ID }}
+          VITE_AZURE_CLIENT_ID: ${{ vars.VITE_AZURE_CLIENT_ID }}
+          VITE_API_SCOPE: ${{ vars.VITE_API_SCOPE }}
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+        run: pnpm --filter gradera-innovation-hub build
+
+      - name: Copy Static Web App config into build output
+        run: cp apps/web/staticwebapp.config.json apps/web/dist/
+
+      - name: Prepare API deployment package
+        run: pnpm --filter gradera-api deploy --prod --legacy "${{ runner.temp }}/api-deploy"
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run database migrations
+        if: inputs.run_migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm --filter gradera-api exec prisma migrate deploy
+
+      - name: Deploy API to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          package: ${{ runner.temp }}/api-deploy
+
+      - name: Deploy web to Azure Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: apps/web
+          output_location: dist
+          skip_app_build: true

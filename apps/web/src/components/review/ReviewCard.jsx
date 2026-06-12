@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { PriorityBadge } from '@/components/shared/StatusBadge';
+import { getIdeaOwnerLabel } from '@/services/apiMappers';
 import { CheckCircle2, XCircle, RotateCcw, ExternalLink, User, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function ReviewCard({
@@ -43,7 +44,7 @@ export default function ReviewCard({
         <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
           <div className="flex items-center gap-1.5">
             <User className="w-3 h-3" />
-            {idea.owner}
+            {getIdeaOwnerLabel(idea)}
           </div>
           {idea.prototype_url && (
             <a href={idea.prototype_url} target="_blank" rel="noopener noreferrer"

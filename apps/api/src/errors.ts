@@ -31,9 +31,15 @@ export class ForbiddenError extends AppError {
 }
 
 export class UnauthorizedError extends AppError {
-  constructor(message = "Authentication required.") {
+  readonly validationReason?: string;
+
+  constructor(
+    message = "Authentication required.",
+    validationReason?: string,
+  ) {
     super(message, 401, "UNAUTHORIZED");
     this.name = "UnauthorizedError";
+    this.validationReason = validationReason;
   }
 }
 

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table';
 import { Search, RotateCcw, Trash2, User } from 'lucide-react';
 import { format } from 'date-fns';
+import { getIdeaOwnerLabel } from '@/services/apiMappers';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -66,7 +67,7 @@ export default function RejectedArchive() {
   const rejected = ideas.filter(i => i.status === 'rejected');
   const filtered = rejected.filter(i =>
     !search || i.solution_name?.toLowerCase().includes(search.toLowerCase()) ||
-    i.owner?.toLowerCase().includes(search.toLowerCase())
+    getIdeaOwnerLabel(i).toLowerCase().includes(search.toLowerCase())
   );
 
   if (isLoading) {
@@ -126,7 +127,7 @@ export default function RejectedArchive() {
                     <TableCell>
                       <div className="flex items-center gap-1.5 text-sm">
                         <User className="w-3 h-3 text-muted-foreground" />
-                        {idea.owner}
+                        {getIdeaOwnerLabel(idea)}
                       </div>
                     </TableCell>
                     <TableCell><PriorityBadge priority={idea.priority} /></TableCell>

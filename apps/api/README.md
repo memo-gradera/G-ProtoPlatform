@@ -161,10 +161,63 @@ RBAC permissions and idea stage transition rules are imported from `@proto-platf
 - `src/middleware/rbac.ts` — Permission enforcement helper
 - `src/middleware/errorHandler.ts` — Normalized API errors
 
+## Azure App Service
+
+Target host for this package. CI/CD scaffolding lives in [`.github/workflows/deploy-dev.yml`](../../.github/workflows/deploy-dev.yml); see [`docs/azure/github-actions.md`](../../docs/azure/github-actions.md) for OIDC setup and secrets.
+
+### Startup command
+
+Linux App Service (Node 20+ / 22):
+
+```bash
+node dist/index.js
+```
+
+Equivalent: `npm start` when the deployment root contains `package.json` with the `"start"` script.
+
+Set **Configuration → General settings → Startup Command** in the Portal, or `site_config.application_stack` / app command in Terraform.
+
+### Required application settings
+
+Production template: [`.env.production.example`](./.env.production.example). Minimum settings:
+
+| Setting | Notes |
+|---------|-------|
+| `NODE_ENV` | `production` |
+| `PORT` | `8080` (App Service default for Node on Linux) |
+| `CORS_ORIGIN` | Azure Static Web App origin (comma-separated if multiple) |
+| `DATABASE_URL` | Azure PostgreSQL with `sslmode=require` |
+| `AZURE_TENANT_ID` | Entra directory ID |
+| `AZURE_CLIENT_ID` | API app registration client ID |
+| `JWT_AUDIENCE` | Must match access token `aud` claim |
+| `DEV_AUTH_BYPASS` | `false` |
+| `AUTO_PROVISION_DEV_USERS` | `false` |
+
+Optional: `APPLICATIONINSIGHTS_CONNECTION_STRING` from Terraform output.
+
+### Health check
+
+Configure App Service health check path:
+
+```
+/health
+```
+
+Liveness endpoint is public (no auth). Default local URL: [http://localhost:3001/health](http://localhost:3001/health).
+
+### Prisma migrations
+
+| Environment | Command |
+|-------------|---------|
+| Local | `pnpm --filter gradera-api db:migrate` (`prisma migrate dev`) |
+| Dev / staging / prod | `pnpm --filter gradera-api exec prisma migrate deploy` |
+
+Run `migrate deploy` in the release pipeline (GitHub Actions **Deploy Dev** with `run_migrations: true`) or as an approved manual step — **not** on every app restart in production.
+
+The deploy workflow packages the API with `pnpm --filter gradera-api deploy --prod --legacy` so workspace dependencies (`@proto-platform/domain`, etc.) are included in the App Service artifact.
+
 ## What is not implemented yet
 
-- MSAL on the frontend (`apps/web`)
-- Azure GitHub Actions deployment
-- Frontend service migration off BASE44
 - Attachment upload routes
 - Soft delete for ideas (schema has no `deleted_at`)
+- Automatic deploy on merge to `main` (deploy workflow is manual `workflow_dispatch` only)

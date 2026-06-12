@@ -1,8 +1,14 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import React, {
+  createContext,
+  useState,
+  useContext,
+  useEffect,
+  useCallback,
+  useRef,
+} from 'react';
+import { getBase44Client } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
 import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
-import { enrichUserWithRole } from '@/lib/userRole';
 import {
   isBase44AuthMode,
   isLocalAuthMode,
@@ -15,10 +21,16 @@ import {
   isDevBypassLoggedOut,
   markDevBypassLoggedOut,
 } from '@/lib/devUser';
-import { apiClient, ApiClientError } from '@/services/apiClient';
-import { normalizeApiUser } from '@/services/apiMappers';
+import { logAuthLifecycle } from '@/lib/authLifecycleLog';
+import { apiClient } from '@/services/apiClient';
+import {
+  completeMsalAuthSession,
+  mapMsalApiError,
+} from '@/auth/msalAuthFlow';
 import {
   handleMsalRedirect,
+  getMsalAccountDiagnostics,
+  isMsalInteractionInProgress,
   loginWithMicrosoft,
   logoutFromMicrosoft,
 } from '@/auth/tokenProvider';
@@ -29,9 +41,6 @@ import {
 
 const AuthContext = createContext();
 
-const UNPROVISIONED_MESSAGE =
-  'User is not provisioned in GRADERA Innovation Hub.';
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -41,7 +50,17 @@ export const AuthProvider = ({ children }) => {
   const [authChecked, setAuthChecked] = useState(false);
   const [appPublicSettings, setAppPublicSettings] = useState(null);
 
+  const authCheckInFlightRef = useRef(null);
+  const appStateCheckInFlightRef = useRef(null);
+
+  const setLoadingState = useCallback((loading) => {
+    logAuthLifecycle('loading state change', { loading });
+    setIsLoadingAuth(loading);
+    setIsLoadingPublicSettings(loading);
+  }, []);
+
   const applyDevBypassAuth = useCallback(() => {
+    logAuthLifecycle('applyDevBypassAuth');
     setAppPublicSettings({ id: appParams.appId, public_settings: {} });
     setAuthError(null);
 
@@ -56,80 +75,92 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
     }
 
-    setIsLoadingAuth(false);
-    setIsLoadingPublicSettings(false);
+    setLoadingState(false);
     setAuthChecked(true);
-  }, []);
+  }, [setLoadingState]);
 
   const applyMsalAuth = useCallback(async () => {
-    setIsLoadingAuth(true);
-    setIsLoadingPublicSettings(true);
-    setAuthError(null);
+    if (authCheckInFlightRef.current) {
+      logAuthLifecycle('applyMsalAuth skipped — already in flight');
+      return authCheckInFlightRef.current;
+    }
 
-    try {
-      await handleMsalRedirect();
-      const profile = await apiClient.get('/users/me');
-      const appUser = normalizeApiUser(profile);
+    const run = (async () => {
+      logAuthLifecycle('applyMsalAuth start');
+      const msalBefore = await getMsalAccountDiagnostics();
+      logAuthLifecycle('msal accounts', msalBefore);
+      setLoadingState(true);
+      setAuthError(null);
 
-      setAppPublicSettings({ id: 'gradera-api', public_settings: {} });
-      setSessionUser(appUser);
-      setUser(appUser);
-      setIsAuthenticated(true);
-    } catch (error) {
-      clearSessionUser();
-      setUser(null);
-      setIsAuthenticated(false);
+      try {
+        const result = await completeMsalAuthSession({
+          handleMsalRedirect,
+          getUsersMe: () => apiClient.get('/users/me'),
+        });
 
-      if (error instanceof ApiClientError) {
-        if (error.type === 'not_provisioned' || error.type === 'forbidden') {
-          setAuthError({
-            type: 'user_not_registered',
-            message: error.message || UNPROVISIONED_MESSAGE,
-          });
-        } else if (error.type === 'unauthorized') {
-          setAuthError({
-            type: 'auth_required',
-            message: error.message || 'Authentication required',
-          });
-        } else {
-          setAuthError({
-            type: 'unknown',
-            message: error.message || 'Failed to authenticate with Microsoft.',
-          });
+        logAuthLifecycle('applyMsalAuth session resolved', {
+          outcome: result.outcome,
+          accountUsername: result.account?.username ?? null,
+          apiUserEmail: result.user?.email ?? null,
+          msalAccounts: await getMsalAccountDiagnostics(),
+        });
+
+        setAppPublicSettings({ id: 'gradera-api', public_settings: {} });
+
+        if (result.outcome === 'no_account') {
+          clearSessionUser();
+          setUser(null);
+          setIsAuthenticated(false);
+          setAuthError(null);
+          return;
         }
-      } else {
-        setAuthError({
-          type: 'unknown',
-          message: error?.message || 'Failed to authenticate with Microsoft.',
+
+        if (result.outcome === 'success') {
+          setSessionUser(result.user);
+          setUser(result.user);
+          setIsAuthenticated(true);
+          setAuthError(null);
+          logAuthLifecycle('setUser called', {
+            userId: result.user.id,
+            email: result.user.email,
+            role: result.user.role,
+          });
+          return;
+        }
+
+        clearSessionUser();
+        setUser(null);
+        setIsAuthenticated(false);
+        setAuthError(result.error);
+        logAuthLifecycle('auth error set', result.error);
+      } catch (error) {
+        console.error('[GRADERA MSAL auth]', error);
+        clearSessionUser();
+        setUser(null);
+        setIsAuthenticated(false);
+        const mappedError = mapMsalApiError(error);
+        setAuthError(mappedError);
+        logAuthLifecycle('auth error set', mappedError);
+      } finally {
+        setLoadingState(false);
+        setAuthChecked(true);
+        logAuthLifecycle('applyMsalAuth end', {
+          authChecked: true,
         });
       }
+    })();
+
+    authCheckInFlightRef.current = run;
+    try {
+      await run;
     } finally {
-      setIsLoadingAuth(false);
-      setIsLoadingPublicSettings(false);
-      setAuthChecked(true);
+      authCheckInFlightRef.current = null;
     }
-  }, []);
+  }, [setLoadingState]);
 
-  useEffect(() => {
-    checkAppState();
-  }, []);
+  const checkUserAuth = useCallback(async () => {
+    logAuthLifecycle('checkUserAuth start');
 
-  useEffect(() => {
-    if (!isDevAuthBypassEnabled()) return undefined;
-
-    const handleRoleChange = () => {
-      if (!isDevBypassLoggedOut()) {
-        const devUser = createDevUser();
-        setUser(devUser);
-        setSessionUser(devUser);
-      }
-    };
-
-    window.addEventListener('dev-user-role-changed', handleRoleChange);
-    return () => window.removeEventListener('dev-user-role-changed', handleRoleChange);
-  }, []);
-
-  const checkAppState = async () => {
     if (isLocalAuthMode()) {
       applyDevBypassAuth();
       return;
@@ -140,10 +171,64 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
-    await checkBase44AppState();
-  };
+    if (!isBase44AuthMode()) {
+      return;
+    }
 
-  const checkBase44AppState = async () => {
+    const client = getBase44Client();
+    if (!client) {
+      setAuthError({
+        type: 'auth_required',
+        message: 'Authentication required',
+      });
+      setIsLoadingAuth(false);
+      setIsAuthenticated(false);
+      setAuthChecked(true);
+      return;
+    }
+
+    try {
+      setIsLoadingAuth(true);
+      const currentUser = await client.auth.me();
+      setSessionUser(currentUser);
+      setUser(currentUser);
+      setIsAuthenticated(true);
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
+    } catch (error) {
+      console.error('User auth check failed:', error);
+      setIsLoadingAuth(false);
+      setIsAuthenticated(false);
+      setAuthChecked(true);
+
+      if (error.status === 401 || error.status === 403) {
+        setAuthError({
+          type: 'auth_required',
+          message: 'Authentication required',
+        });
+      }
+    } finally {
+      logAuthLifecycle('checkUserAuth end');
+    }
+  }, [applyDevBypassAuth, applyMsalAuth]);
+
+  const checkBase44AppState = useCallback(async () => {
+    if (!isBase44AuthMode()) {
+      return;
+    }
+
+    const client = getBase44Client();
+    if (!client) {
+      setAuthError({
+        type: 'unknown',
+        message: 'BASE44 client is not available.',
+      });
+      setIsLoadingPublicSettings(false);
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
+      return;
+    }
+
     try {
       setIsLoadingPublicSettings(true);
       setAuthError(null);
@@ -210,46 +295,66 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
     }
-  };
+  }, [checkUserAuth]);
 
-  const checkUserAuth = async () => {
-    if (isLocalAuthMode()) {
-      applyDevBypassAuth();
-      return;
+  const checkAppState = useCallback(async () => {
+    if (appStateCheckInFlightRef.current) {
+      logAuthLifecycle('checkAppState skipped — already in flight');
+      return appStateCheckInFlightRef.current;
     }
 
-    if (isMsalAuthMode()) {
-      await applyMsalAuth();
-      return;
-    }
+    const run = (async () => {
+      logAuthLifecycle('checkAppState start');
 
-    try {
-      setIsLoadingAuth(true);
-      const currentUser = await enrichUserWithRole(await base44.auth.me());
-      setSessionUser(currentUser);
-      setUser(currentUser);
-      setIsAuthenticated(true);
-      setIsLoadingAuth(false);
-      setAuthChecked(true);
-    } catch (error) {
-      console.error('User auth check failed:', error);
-      setIsLoadingAuth(false);
-      setIsAuthenticated(false);
-      setAuthChecked(true);
-
-      if (error.status === 401 || error.status === 403) {
-        setAuthError({
-          type: 'auth_required',
-          message: 'Authentication required',
-        });
+      if (isLocalAuthMode()) {
+        applyDevBypassAuth();
+        logAuthLifecycle('checkAppState end', { mode: 'local' });
+        return;
       }
+
+      if (isMsalAuthMode()) {
+        await applyMsalAuth();
+        logAuthLifecycle('checkAppState end', { mode: 'msal' });
+        return;
+      }
+
+      await checkBase44AppState();
+      logAuthLifecycle('checkAppState end', { mode: 'base44' });
+    })();
+
+    appStateCheckInFlightRef.current = run;
+    try {
+      await run;
+    } finally {
+      appStateCheckInFlightRef.current = null;
     }
-  };
+  }, [applyDevBypassAuth, applyMsalAuth, checkBase44AppState]);
+
+  useEffect(() => {
+    checkAppState();
+  }, [checkAppState]);
+
+  useEffect(() => {
+    if (!isDevAuthBypassEnabled()) return undefined;
+
+    const handleRoleChange = () => {
+      if (!isDevBypassLoggedOut()) {
+        const devUser = createDevUser();
+        setUser(devUser);
+        setSessionUser(devUser);
+      }
+    };
+
+    window.addEventListener('dev-user-role-changed', handleRoleChange);
+    return () => window.removeEventListener('dev-user-role-changed', handleRoleChange);
+  }, []);
 
   const logout = (shouldRedirect = true) => {
+    logAuthLifecycle('logout', { shouldRedirect });
     setUser(null);
     setIsAuthenticated(false);
     clearSessionUser();
+    setAuthError(null);
 
     if (isLocalAuthMode()) {
       markDevBypassLoggedOut();
@@ -266,14 +371,31 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
+    const client = getBase44Client();
+    if (!client) return;
+
     if (shouldRedirect) {
-      base44.auth.logout(window.location.href);
+      client.auth.logout(window.location.href);
     } else {
-      base44.auth.logout();
+      client.auth.logout();
     }
   };
 
   const navigateToLogin = () => {
+    if (isAuthenticated && user) {
+      logAuthLifecycle('navigateToLogin skipped — already authenticated', {
+        email: user.email,
+      });
+      return;
+    }
+
+    if (isMsalAuthMode() && isMsalInteractionInProgress()) {
+      logAuthLifecycle('navigateToLogin skipped — MSAL interaction in progress');
+      return;
+    }
+
+    logAuthLifecycle('navigateToLogin');
+
     if (isLocalAuthMode()) {
       window.location.href = '/login';
       return;
@@ -284,8 +406,16 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
-    base44.auth.redirectToLogin(window.location.href);
+    const client = getBase44Client();
+    if (client) {
+      client.auth.redirectToLogin(window.location.href);
+    }
   };
+
+  const clearAuthError = useCallback(() => {
+    logAuthLifecycle('clearAuthError');
+    setAuthError(null);
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -301,6 +431,7 @@ export const AuthProvider = ({ children }) => {
         navigateToLogin,
         checkUserAuth,
         checkAppState,
+        clearAuthError,
         isMsalAuthMode: isMsalAuthMode(),
         isBase44AuthMode: isBase44AuthMode(),
       }}

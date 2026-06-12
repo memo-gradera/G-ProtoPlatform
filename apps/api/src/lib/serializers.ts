@@ -47,6 +47,72 @@ export function serializeUser(user: DbUserWithRoles) {
   };
 }
 
+export function serializeOwnerSummary(owner: unknown) {
+  if (!owner || typeof owner !== "object") {
+    return undefined;
+  }
+
+  const record = owner as {
+    id: string;
+    email: string;
+    fullName?: string;
+    full_name?: string;
+  };
+
+  return {
+    id: record.id,
+    email: record.email,
+    full_name: record.fullName ?? record.full_name,
+  };
+}
+
+export function serializeRelatedIdeaSummary(idea: unknown) {
+  if (!idea || typeof idea !== "object") {
+    return undefined;
+  }
+
+  const record = idea as {
+    id: string;
+    solutionName?: string;
+    solution_name?: string;
+  };
+
+  return {
+    id: record.id,
+    solution_name: record.solutionName ?? record.solution_name,
+  };
+}
+
+export function serializePrototypeTags(prototype: Record<string, unknown>): string[] {
+  if (Array.isArray(prototype.tags)) {
+    return prototype.tags.filter((tag): tag is string => typeof tag === "string");
+  }
+
+  const tagMaps = prototype.tagMaps ?? prototype.tag_maps;
+  if (!Array.isArray(tagMaps)) {
+    return [];
+  }
+
+  return tagMaps
+    .map((entry) => {
+      if (typeof entry === "string") {
+        return entry;
+      }
+
+      const tag =
+        typeof entry === "object" && entry !== null && "tag" in entry
+          ? (entry as { tag?: { name?: string } }).tag
+          : entry;
+
+      if (typeof tag === "object" && tag !== null && "name" in tag) {
+        return String((tag as { name: string }).name);
+      }
+
+      return null;
+    })
+    .filter((name): name is string => Boolean(name));
+}
+
 export function serializeIdea(idea: Record<string, unknown>) {
   return {
     id: idea.id,
@@ -69,13 +135,7 @@ export function serializeIdea(idea: Record<string, unknown>) {
     decision_notes: idea.decisionNotes,
     created_at: idea.createdAt,
     updated_at: idea.updatedAt,
-    owner: idea.owner
-      ? {
-          id: (idea.owner as { id: string }).id,
-          email: (idea.owner as { email: string }).email,
-          full_name: (idea.owner as { fullName: string }).fullName,
-        }
-      : undefined,
+    owner: serializeOwnerSummary(idea.owner),
   };
 }
 
@@ -86,12 +146,17 @@ export function serializePrototype(prototype: Record<string, unknown>) {
     description: prototype.description,
     category: prototype.category,
     status: prototype.status,
-    owner_id: prototype.ownerId,
-    demo_url: prototype.demoUrl,
-    screenshot_url: prototype.screenshotUrl,
-    related_idea_id: prototype.relatedIdeaId,
-    created_at: prototype.createdAt,
-    updated_at: prototype.updatedAt,
+    owner_id: prototype.ownerId ?? prototype.owner_id,
+    owner: serializeOwnerSummary(prototype.owner),
+    demo_url: prototype.demoUrl ?? prototype.demo_url,
+    screenshot_url: prototype.screenshotUrl ?? prototype.screenshot_url,
+    related_idea_id: prototype.relatedIdeaId ?? prototype.related_idea_id,
+    related_idea: serializeRelatedIdeaSummary(
+      prototype.relatedIdea ?? prototype.related_idea,
+    ),
+    tags: serializePrototypeTags(prototype),
+    created_at: prototype.createdAt ?? prototype.created_at,
+    updated_at: prototype.updatedAt ?? prototype.updated_at,
   };
 }
 

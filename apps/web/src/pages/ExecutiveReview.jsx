@@ -56,7 +56,7 @@ export default function ExecutiveReview() {
       }
       if (decision === 'needs_revision') {
         return ideasService.transitionStatus(id, 'in_progress', {
-          patch: { executive_decision: 'needs_revision' },
+          patch: { reason: 'needs_revision' },
         });
       }
       throw new Error(`Unsupported decision: ${decision}`);

@@ -1,6 +1,6 @@
-import { base44 } from '@/api/base44Client';
+import { getBase44Client } from '@/api/base44Client';
 import { canPerformAction, RbacError } from '@/domain/rbac';
-import { isMsalAuthMode } from '@/lib/authMode';
+import { isBase44AuthMode, isMsalAuthMode } from '@/lib/authMode';
 import { createDevUser, isDevAuthBypassEnabled } from '@/lib/devUser';
 import { enrichUserWithRole } from '@/lib/userRole';
 import { getSessionUser, setSessionUser } from '@/auth/sessionUser';
@@ -24,7 +24,16 @@ export async function getCurrentUser() {
     return appUser;
   }
 
-  const authUser = await base44.auth.me();
+  if (!isBase44AuthMode()) {
+    throw new RbacError('Authentication required.');
+  }
+
+  const client = getBase44Client();
+  if (!client) {
+    throw new RbacError('Authentication required.');
+  }
+
+  const authUser = await client.auth.me();
   return enrichUserWithRole(authUser);
 }
 

@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
+import { resolveProtectedRouteAccess } from '@/auth/msalAuthFlow';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import GraderaLogo from '@/components/GraderaLogo';
 
@@ -12,26 +12,24 @@ const DefaultFallback = () => (
 );
 
 export default function ProtectedRoute({ fallback = <DefaultFallback />, unauthenticatedElement }) {
-  const { isAuthenticated, isLoadingAuth, authChecked, authError, checkUserAuth } = useAuth();
+  const { isAuthenticated, isLoadingAuth, authChecked, authError } = useAuth();
 
-  useEffect(() => {
-    if (!authChecked && !isLoadingAuth) {
-      checkUserAuth();
-    }
-  }, [authChecked, isLoadingAuth, checkUserAuth]);
+  const decision = resolveProtectedRouteAccess({
+    isAuthenticated,
+    authError,
+    isLoadingAuth,
+    authChecked,
+  });
 
-  if (isLoadingAuth || !authChecked) {
+  if (decision.action === 'loading') {
     return fallback;
   }
 
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    }
-    return unauthenticatedElement;
+  if (decision.action === 'not_provisioned') {
+    return <UserNotRegisteredError message={authError?.message} />;
   }
 
-  if (!isAuthenticated) {
+  if (decision.action === 'redirect_login') {
     return unauthenticatedElement;
   }
 
