@@ -138,6 +138,108 @@ export function mergePrototypeForm(prototype, emptyPrototype = {}) {
   };
 }
 
+const API_PROTOTYPE_URL_FIELDS = new Set(['demo_url', 'screenshot_url']);
+
+const API_PROTOTYPE_CREATE_FIELDS = new Set([
+  'name',
+  'description',
+  'category',
+  'owner_id',
+  'demo_url',
+  'screenshot_url',
+  'related_idea_id',
+]);
+
+const API_PROTOTYPE_UPDATE_FIELDS = new Set([
+  ...API_PROTOTYPE_CREATE_FIELDS,
+  'status',
+]);
+
+/**
+ * Normalizes user-entered URLs for API zod .url() validation.
+ * @param {unknown} value
+ * @param {{ allowEmpty?: boolean }} [options]
+ * @returns {string | null | undefined}
+ */
+export function normalizeUrlForApi(value, { allowEmpty = false } = {}) {
+  if (value == null) return undefined;
+
+  const trimmed = String(value).trim();
+  if (trimmed === '') {
+    return allowEmpty ? null : undefined;
+  }
+
+  let candidate = trimmed;
+  if (!/^https?:\/\//i.test(candidate)) {
+    candidate = `https://${candidate}`;
+  }
+
+  try {
+    const url = new URL(candidate);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return undefined;
+    }
+    return candidate;
+  } catch {
+    return undefined;
+  }
+}
+
+function mapPrototypeFormToApiPayload(form, allowedFields, { allowNullUrls = false } = {}) {
+  const payload = {};
+
+  for (const key of allowedFields) {
+    if (!Object.prototype.hasOwnProperty.call(form, key)) continue;
+
+    const value = form[key];
+    if (value === undefined) continue;
+
+    if (API_PROTOTYPE_URL_FIELDS.has(key)) {
+      const normalized = normalizeUrlForApi(value, { allowEmpty: allowNullUrls });
+      if (normalized !== undefined) {
+        payload[key] = normalized;
+      }
+      continue;
+    }
+
+    if (key === 'related_idea_id') {
+      const trimmed = value == null ? '' : String(value).trim();
+      if (trimmed === '') {
+        if (allowNullUrls) payload[key] = null;
+        continue;
+      }
+      payload[key] = trimmed;
+      continue;
+    }
+
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed === '') {
+        if (allowNullUrls) payload[key] = null;
+        continue;
+      }
+      payload[key] = trimmed;
+      continue;
+    }
+
+    payload[key] = value;
+  }
+
+  return payload;
+}
+
+/** Maps prototype form data to API create payload. */
+export function mapPrototypeFormToApiCreatePayload(form = {}) {
+  return mapPrototypeFormToApiPayload(form, API_PROTOTYPE_CREATE_FIELDS);
+}
+
+/** Maps prototype form data to API PATCH payload. */
+export function mapPrototypeFormToApiUpdatePayload(form = {}) {
+  return mapPrototypeFormToApiPayload(form, API_PROTOTYPE_UPDATE_FIELDS, {
+    allowNullUrls: true,
+  });
+}
+
 const API_IDEA_CREATE_FIELDS = new Set([
   'solution_name',
   'description',
@@ -378,9 +480,19 @@ export function buildTransitionPayload(targetStatus, context = {}) {
   ];
 
   for (const field of fields) {
-    if (context[field] != null && String(context[field]).trim() !== '') {
-      payload[field] = String(context[field]).trim();
+    if (context[field] == null || String(context[field]).trim() === '') {
+      continue;
     }
+
+    if (field === 'prototype_url') {
+      const normalized = normalizeUrlForApi(context[field]);
+      if (normalized !== undefined) {
+        payload[field] = normalized;
+      }
+      continue;
+    }
+
+    payload[field] = String(context[field]).trim();
   }
 
   return payload;

@@ -7,12 +7,15 @@ import {
   getPrototypeRelatedIdeaLabel,
   mapIdeaFormToApiCreatePayload,
   mapIdeaFormToApiUpdatePayload,
+  mapPrototypeFormToApiCreatePayload,
+  mapPrototypeFormToApiUpdatePayload,
   mapPriorityForApi,
   mergePrototypeForm,
   normalizeHistoryEntry,
   normalizeIdea,
   normalizePrototype,
   normalizeReview,
+  normalizeUrlForApi,
 } from '@/services/apiMappers';
 import { mergeIdeaForm } from '@/components/shared/ideaFormConfig';
 
@@ -89,6 +92,52 @@ describe('idea API payload mapping', () => {
     expect(payload.minimum_viable_functionality).toBe('Basic workflow');
     expect(payload.value_hypothesis).toBe('Unique value');
     expect(payload.acceptance_criteria).toBe('Must pass review');
+  });
+});
+
+describe('prototype API payload mapping', () => {
+  it('normalizes bare domains to https URLs', () => {
+    expect(normalizeUrlForApi('www.google.com')).toBe('https://www.google.com');
+    expect(normalizeUrlForApi('google.com')).toBe('https://google.com');
+  });
+
+  it('passes valid https URLs through unchanged', () => {
+    expect(normalizeUrlForApi('https://example.com/demo')).toBe(
+      'https://example.com/demo',
+    );
+    expect(normalizeUrlForApi('http://localhost:8080')).toBe('http://localhost:8080');
+  });
+
+  it('omits empty URL fields from create payload', () => {
+    const payload = mapPrototypeFormToApiCreatePayload({
+      name: 'Demo Prototype',
+      demo_url: 'www.google.com',
+      screenshot_url: '',
+      owner: 'Owner Name',
+      tags: ['ignored'],
+      status: 'draft',
+    });
+
+    expect(payload).toEqual({
+      name: 'Demo Prototype',
+      demo_url: 'https://www.google.com',
+    });
+    expect(payload.screenshot_url).toBeUndefined();
+    expect(payload.owner).toBeUndefined();
+    expect(payload.tags).toBeUndefined();
+    expect(payload.status).toBeUndefined();
+  });
+
+  it('sends null for cleared URL fields on update', () => {
+    const payload = mapPrototypeFormToApiUpdatePayload({
+      name: 'Updated Prototype',
+      screenshot_url: '',
+    });
+
+    expect(payload).toEqual({
+      name: 'Updated Prototype',
+      screenshot_url: null,
+    });
   });
 });
 

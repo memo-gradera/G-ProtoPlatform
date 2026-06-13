@@ -4,6 +4,8 @@ import { assertCanPerformAction } from '@/lib/permissionGuard';
 import { isApiBackendEnabled } from '@/services/backendMode';
 import { apiClient } from '@/services/apiClient';
 import {
+  mapPrototypeFormToApiCreatePayload,
+  mapPrototypeFormToApiUpdatePayload,
   normalizePrototype,
   toApiPrototypeStatus,
 } from '@/services/apiMappers';
@@ -11,11 +13,15 @@ import {
 const DEFAULT_SORT = '-created_date';
 const DEFAULT_LIMIT = 500;
 
-function mapPrototypePayloadForApi(payload = {}) {
-  const mapped = { ...payload };
+function mapPrototypePayloadForApi(payload = {}, { isUpdate = false } = {}) {
+  const mapped = isUpdate
+    ? mapPrototypeFormToApiUpdatePayload(payload)
+    : mapPrototypeFormToApiCreatePayload(payload);
+
   if (mapped.status != null) {
     mapped.status = toApiPrototypeStatus(mapped.status);
   }
+
   return mapped;
 }
 
@@ -51,7 +57,7 @@ export const prototypesService = {
     if (isApiBackendEnabled()) {
       const created = await apiClient.post(
         '/prototypes',
-        mapPrototypePayloadForApi(payload),
+        mapPrototypePayloadForApi(payload, { isUpdate: false }),
       );
       return normalizePrototype(created);
     }
@@ -75,7 +81,7 @@ export const prototypesService = {
     if (isApiBackendEnabled()) {
       const updated = await apiClient.patch(
         `/prototypes/${id}`,
-        mapPrototypePayloadForApi(payload),
+        mapPrototypePayloadForApi(payload, { isUpdate: true }),
       );
       return normalizePrototype(updated);
     }
