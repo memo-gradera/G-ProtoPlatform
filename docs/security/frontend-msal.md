@@ -30,7 +30,7 @@ Resolution logic lives in:
 | `VITE_AZURE_TENANT_ID` | Entra directory (tenant) ID |
 | `VITE_AZURE_CLIENT_ID` | SPA app registration client ID |
 | `VITE_API_SCOPE` | API delegated scope, e.g. `api://<api-client-id>/access_as_user` |
-| `VITE_API_BASE_URL` | API base URL, e.g. `http://localhost:3001/api` |
+| `VITE_API_BASE_URL` | API base URL, e.g. `http://localhost:8080/api` |
 | `VITE_DEV_AUTH_BYPASS` | Must be `false` in production |
 | `VITE_DEV_DATA_BYPASS` | Must be `false` in production |
 
@@ -123,7 +123,7 @@ VITE_AUTH_PROVIDER=local
 VITE_BACKEND_PROVIDER=api
 VITE_DEV_AUTH_BYPASS=true
 VITE_DEV_DATA_BYPASS=false
-VITE_API_BASE_URL=http://localhost:3001/api
+VITE_API_BASE_URL=http://localhost:8080/api
 ```
 
 **API (`apps/api/.env`):**
@@ -157,7 +157,7 @@ VITE_DEV_DATA_BYPASS=false
 VITE_AZURE_TENANT_ID=<tenant>
 VITE_AZURE_CLIENT_ID=<spa-client-id>
 VITE_API_SCOPE=api://<api-client-id>/access_as_user
-VITE_API_BASE_URL=http://localhost:3001/api
+VITE_API_BASE_URL=http://localhost:8080/api
 ```
 
 **API:**
@@ -189,7 +189,7 @@ cd apps/web
 #   VITE_AZURE_TENANT_ID=...
 #   VITE_AZURE_CLIENT_ID=...
 #   VITE_API_SCOPE=api://.../access_as_user
-#   VITE_API_BASE_URL=http://localhost:3001/api
+#   VITE_API_BASE_URL=http://localhost:8080/api
 pnpm dev
 ```
 

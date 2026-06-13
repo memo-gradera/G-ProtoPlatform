@@ -1,0 +1,40 @@
+# Docker build context is the monorepo root:
+#   docker build -f apps/api/Dockerfile -t gradera-api:latest .
+
+# Dependencies and build outputs (rebuilt inside the image)
+**/node_modules
+**/.pnpm-store
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+
+# Git and IDE
+.git
+.gitignore
+**/.DS_Store
+.vscode
+.cursor
+
+# Secrets and local env
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.production.example
+
+# Apps not needed for API image
+apps/web
+
+# Docs, infra, and unrelated packages
+docs
+infra
+supabase
+G-Innovation-Hub
+packages/supabase-client
+
+# API packaging artifacts and tests (not required at runtime)
+apps/api/test
+apps/api/scripts/prepareAzurePackage.mjs
+apps/api/scripts/prepareAzureSourcePackage.mjs
+
+# CI only
+.github

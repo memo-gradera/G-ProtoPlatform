@@ -140,6 +140,71 @@ Template: [apps/api/.env.production.example](../../apps/api/.env.production.exam
 
 ---
 
+## API deployment package
+
+The API is a pnpm workspace package with `workspace:*` dependencies. A plain `npm install` on a copied `package.json` will not resolve those deps. Use one of the packaging options below.
+
+### Docker container (recommended)
+
+Use when App Service zip/Oryx deploy corrupts or incompletely extracts `node_modules`. Build a container image and run App Service on Linux containers + ACR.
+
+```bash
+docker build -f apps/api/Dockerfile -t gradera-api:latest .
+```
+
+Full guide: [api-docker-deployment.md](./api-docker-deployment.md) — local run, ACR push, App Service container config, and future GitHub Actions pattern.
+
+### Source package (App Service / Oryx zip)
+
+Use when deploying to Azure App Service and letting **Oryx** run `npm install --omit=dev` on the server. Avoids Azure transforming prebuilt `node_modules` into `node_modules.tar.gz` symlinks.
+
+```bash
+pnpm --filter @proto-platform/domain build
+pnpm --filter gradera-api build
+pnpm --filter gradera-api package:azure-source
+```
+
+Script: [`apps/api/scripts/prepareAzureSourcePackage.mjs`](../../apps/api/scripts/prepareAzureSourcePackage.mjs)
+
+Outputs `/tmp/gradera-api-source-package` and `/tmp/gradera-api-source.zip` containing:
+
+- `dist/`, `prisma/`, `package.json`, `package-lock.json`
+- `vendor/@proto-platform/domain` (file dependency; no `workspace:*`)
+- **No** `node_modules/` in the zip
+
+The script validates `npm install --omit=dev` locally, then removes `node_modules` before zipping. `postinstall` runs `prisma generate` when Oryx installs on Azure.
+
+### Self-contained package (zip deploy with node_modules)
+
+Use for manual zip deploy or environments where you control the full artifact and Oryx/npm install is not run on the server.
+
+```bash
+pnpm --filter @proto-platform/domain build
+pnpm --filter gradera-api build
+pnpm --filter gradera-api package:azure
+```
+
+Script: [`apps/api/scripts/prepareAzurePackage.mjs`](../../apps/api/scripts/prepareAzurePackage.mjs)
+
+Outputs `/tmp/gradera-api-azure-package` and `/tmp/gradera-api.zip` (~38 MB) with production `node_modules` included.
+
+The **Deploy Dev** workflow currently runs `pnpm --filter gradera-api package:azure` (zip). Prefer **Docker** or `package:azure-source` if zip deploy fails at runtime.
+
+### Future: container deploy workflow
+
+Planned addition to `.github/workflows/` (not implemented yet):
+
+| Step | Action |
+|------|--------|
+| Build image | `docker/build-push-action` with `file: apps/api/Dockerfile`, `context: .` |
+| Push to ACR | Tag `latest` + `${{ github.sha }}`; auth via OIDC or `ACR_*` secrets |
+| Deploy | `az webapp config container set` or `azure/webapps-deploy@v3` for containers |
+| Validate on PR | Optional `docker build -f apps/api/Dockerfile .` job in CI |
+
+See [api-docker-deployment.md](./api-docker-deployment.md) for ACR and App Service settings.
+
+---
+
 ## Deployment order
 
 Complete these steps once before the first successful **Deploy Dev** run:

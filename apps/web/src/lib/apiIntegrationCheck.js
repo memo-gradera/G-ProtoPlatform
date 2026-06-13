@@ -3,7 +3,7 @@
  */
 
 export const API_BASE_URL_MISSING_MESSAGE =
-  'VITE_API_BASE_URL is not set. Add it to apps/web/.env.local (e.g. http://localhost:3001/api).';
+  'VITE_API_BASE_URL is not set. Add it to apps/web/.env.local (e.g. http://localhost:8080/api).';
 
 /**
  * @param {Record<string, string | undefined>} env

@@ -13,13 +13,13 @@ describe('apiIntegrationCheck', () => {
 
   it('normalizes API base URL', () => {
     expect(
-      resolveApiBaseUrl({ VITE_API_BASE_URL: 'http://localhost:3001/api/' }),
-    ).toBe('http://localhost:3001/api');
+      resolveApiBaseUrl({ VITE_API_BASE_URL: 'http://localhost:8080/api/' }),
+    ).toBe('http://localhost:8080/api');
   });
 
   it('derives health URL from API base URL', () => {
-    expect(deriveHealthUrl('http://localhost:3001/api')).toBe(
-      'http://localhost:3001/health',
+    expect(deriveHealthUrl('http://localhost:8080/api')).toBe(
+      'http://localhost:8080/health',
     );
   });
 

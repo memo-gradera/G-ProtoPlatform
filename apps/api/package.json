@@ -14,7 +14,9 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "package:azure": "node scripts/prepareAzurePackage.mjs",
+    "package:azure-source": "node scripts/prepareAzureSourcePackage.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

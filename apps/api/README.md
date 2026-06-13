@@ -90,7 +90,7 @@ Data access: `src/db/client.ts`, `src/repositories/`, `src/services/`.
 | `GET` | `/api/files` | Placeholder | Files (not implemented) |
 | `GET` | `/api/auth` | Placeholder | Auth (MSAL pending) |
 
-**Health URL (default):** [http://localhost:3001/health](http://localhost:3001/health)
+**Health URL (default):** [http://localhost:8080/health](http://localhost:8080/health)
 
 ### Local test flow
 
@@ -101,10 +101,10 @@ pnpm --filter gradera-api db:seed
 pnpm --filter gradera-api dev
 
 # Another terminal:
-curl http://localhost:3001/health
-curl http://localhost:3001/api/users/me
-curl http://localhost:3001/api/ideas
-curl http://localhost:3001/api/dashboard/kpis
+curl http://localhost:8080/health
+curl http://localhost:8080/api/users/me
+curl http://localhost:8080/api/ideas
+curl http://localhost:8080/api/dashboard/kpis
 pnpm --filter gradera-api test
 ```
 
@@ -125,20 +125,20 @@ See [`docs/security/authentication.md`](../../docs/security/authentication.md) f
 ```bash
 # Dev bypass (default)
 DEV_AUTH_BYPASS=true pnpm --filter gradera-api dev
-curl http://localhost:3001/api/users/me
+curl http://localhost:8080/api/users/me
 
 # JWT path
 DEV_AUTH_BYPASS=false \
   AZURE_TENANT_ID=<tenant> \
   JWT_AUDIENCE=api://<api-client-id> \
-  curl -H "Authorization: Bearer $TOKEN" http://localhost:3001/api/users/me
+  curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/users/me
 ```
 
 ## Environment variables
 
 See [`.env.example`](./.env.example):
 
-- `PORT` — HTTP port (default `3001`)
+- `PORT` — HTTP port (default `8080`)
 - `NODE_ENV` — `development` | `test` | `production`
 - `CORS_ORIGIN` — Allowed frontend origin(s), comma-separated
 - `DATABASE_URL` — PostgreSQL connection string
@@ -203,7 +203,7 @@ Configure App Service health check path:
 /health
 ```
 
-Liveness endpoint is public (no auth). Default local URL: [http://localhost:3001/health](http://localhost:3001/health).
+Liveness endpoint is public (no auth). Default local URL: [http://localhost:8080/health](http://localhost:8080/health).
 
 ### Prisma migrations
 
@@ -214,7 +214,34 @@ Liveness endpoint is public (no auth). Default local URL: [http://localhost:3001
 
 Run `migrate deploy` in the release pipeline (GitHub Actions **Deploy Dev** with `run_migrations: true`) or as an approved manual step — **not** on every app restart in production.
 
-The deploy workflow packages the API with `pnpm --filter gradera-api deploy --prod --legacy` so workspace dependencies (`@proto-platform/domain`, etc.) are included in the App Service artifact.
+### Docker container (recommended for App Service)
+
+Avoids App Service zip/Oryx `node_modules` extraction issues. Build from monorepo root:
+
+```bash
+docker build -f apps/api/Dockerfile -t gradera-api:latest .
+docker run --rm -p 8080:8080 --env-file apps/api/.env gradera-api:latest
+```
+
+See [`docs/azure/api-docker-deployment.md`](../../docs/azure/api-docker-deployment.md) for ACR push and App Service container configuration.
+
+### Zip packages (alternative)
+
+```bash
+pnpm --filter @proto-platform/domain build
+pnpm --filter gradera-api build
+pnpm --filter gradera-api package:azure
+```
+
+Outputs `/tmp/gradera-api-azure-package` and `/tmp/gradera-api.zip`. Use when uploading a full artifact without Oryx install.
+
+**Source package (recommended for App Service):** lets Azure/Oryx run `npm install --omit=dev` and avoids `node_modules.tar.gz` symlink issues:
+
+```bash
+pnpm --filter gradera-api package:azure-source
+```
+
+Outputs `/tmp/gradera-api-source.zip` with `dist/`, `prisma/`, `package.json`, `package-lock.json`, and `vendor/@proto-platform/domain` — no `node_modules`. See [`docs/azure/github-actions.md`](../../docs/azure/github-actions.md).
 
 ## What is not implemented yet
 

@@ -26,7 +26,7 @@ describe("GET /health", () => {
     const env = loadEnv({
       ...process.env,
       NODE_ENV: "test",
-      PORT: "3001",
+      PORT: "8080",
       DEV_AUTH_BYPASS: "true",
     });
     const app = createApp(env);
@@ -45,7 +45,7 @@ describe("GET /health", () => {
     const env = loadEnv({
       ...process.env,
       NODE_ENV: "test",
-      PORT: "3001",
+      PORT: "8080",
       DEV_AUTH_BYPASS: "false",
     });
     const app = createApp(env);
@@ -65,7 +65,7 @@ describe("GET /api/users/me", () => {
     const env = loadEnv({
       ...process.env,
       NODE_ENV: "test",
-      PORT: "3001",
+      PORT: "8080",
       DEV_AUTH_BYPASS: "false",
     });
     const app = createApp(env);
@@ -89,7 +89,7 @@ describe("GET /api/ideas", () => {
     const env = loadEnv({
       ...process.env,
       NODE_ENV: "test",
-      PORT: "3001",
+      PORT: "8080",
       DEV_AUTH_BYPASS: "true",
     });
     const app = createApp(env);

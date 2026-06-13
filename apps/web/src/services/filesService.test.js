@@ -16,7 +16,7 @@ vi.mock('@/services/apiClient', () => ({
 }));
 
 vi.mock('@/auth/msalConfig', () => ({
-  getApiBaseUrl: vi.fn(() => 'http://localhost:3001/api'),
+  getApiBaseUrl: vi.fn(() => 'http://localhost:8080/api'),
 }));
 
 vi.mock('@/auth/tokenProvider', () => ({

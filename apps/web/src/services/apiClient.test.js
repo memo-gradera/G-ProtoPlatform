@@ -9,7 +9,7 @@ import { acquireAccessToken } from '@/auth/tokenProvider';
 
 describe('apiClient', () => {
   beforeEach(() => {
-    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:3001/api');
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080/api');
     vi.clearAllMocks();
   });
 
@@ -34,7 +34,7 @@ describe('apiClient', () => {
 
     expect(result).toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://localhost:3001/api/users/me',
+      'http://localhost:8080/api/users/me',
       expect.objectContaining({
         method: 'GET',
         headers: expect.objectContaining({

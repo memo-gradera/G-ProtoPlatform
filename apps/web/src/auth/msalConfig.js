@@ -24,7 +24,7 @@ export function getApiScope() {
 }
 
 export function getApiBaseUrl() {
-  const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+  const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
   return base.replace(/\/$/, '');
 }
 

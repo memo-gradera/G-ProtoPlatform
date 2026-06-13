@@ -67,7 +67,10 @@ jobs:
         run: cp apps/web/staticwebapp.config.json apps/web/dist/
 
       - name: Prepare API deployment package
-        run: pnpm --filter gradera-api deploy --prod --legacy "${{ runner.temp }}/api-deploy"
+        run: pnpm --filter gradera-api package:azure
+        env:
+          AZURE_PACKAGE_DIR: ${{ runner.temp }}/gradera-api-azure-package
+          AZURE_PACKAGE_ZIP: ${{ runner.temp }}/gradera-api.zip
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -86,7 +89,7 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ vars.AZURE_WEBAPP_NAME }}
-          package: ${{ runner.temp }}/api-deploy
+          package: ${{ runner.temp }}/gradera-api-azure-package
 
       - name: Deploy web to Azure Static Web App
         uses: Azure/static-web-apps-deploy@v1

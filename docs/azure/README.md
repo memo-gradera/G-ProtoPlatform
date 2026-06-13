@@ -12,6 +12,7 @@ Planning and deployment documentation for Azure hosting. **No resources are prov
 | [secrets-and-config.md](./secrets-and-config.md) | Env vars and future GitHub secrets |
 | [deployment-strategy.md](./deployment-strategy.md) | Promotion path and planned CI/CD stages |
 | [github-actions.md](./github-actions.md) | CI workflows, OIDC, secrets, and deploy order |
+| [api-docker-deployment.md](./api-docker-deployment.md) | Docker image build, ACR, App Service containers |
 | [cost-estimate.md](./cost-estimate.md) | Monthly cost scenarios |
 
 ## Infrastructure as Code

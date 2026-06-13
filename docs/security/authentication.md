@@ -102,7 +102,7 @@ DEV_AUTH_BYPASS=false
 AZURE_TENANT_ID=<tenant>
 JWT_AUDIENCE=api://<api-client-id>
 # Acquire token via Azure CLI or Postman, then:
-curl -H "Authorization: Bearer $TOKEN" http://localhost:3001/api/users/me
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/users/me
 ```
 
 ## MSAL frontend integration (next phase)
