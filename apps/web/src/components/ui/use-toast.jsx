@@ -161,4 +161,14 @@ function useToast() {
   };
 }
 
+export function shouldDismissToastOnClick(target) {
+  if (!target || typeof target.closest !== 'function') {
+    return true;
+  }
+
+  return !target.closest(
+    'button, a, input, textarea, select, [role="button"], [data-toast-interactive]',
+  );
+}
+
 export { useToast, toast }; 
