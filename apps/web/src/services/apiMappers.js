@@ -153,7 +153,7 @@ const API_IDEA_CREATE_FIELDS = new Set([
 ]);
 
 const API_IDEA_UPDATE_FIELDS = new Set([
-  ...API_IDEA_CREATE_FIELDS,
+  ...[...API_IDEA_CREATE_FIELDS].filter((field) => field !== 'owner_id'),
   'prototype_url',
   'demo_notes',
   'decision_notes',

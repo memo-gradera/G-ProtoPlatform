@@ -66,6 +66,18 @@ describe('idea API payload mapping', () => {
     expect(payload.prototype_name).toBeUndefined();
   });
 
+  it('strips owner_id and owner from PATCH payload', () => {
+    const payload = mapIdeaFormToApiUpdatePayload({
+      solution_name: 'Updated',
+      owner_id: '550e8400-e29b-41d4-a716-446655440000',
+      owner: 'Owner Name',
+    });
+
+    expect(payload.owner_id).toBeUndefined();
+    expect(payload.owner).toBeUndefined();
+    expect(payload.solution_name).toBe('Updated');
+  });
+
   it('maps blueprint aliases into supported API fields', () => {
     const payload = mapIdeaFormToApiCreatePayload({
       solution_name: 'Blueprint Idea',
