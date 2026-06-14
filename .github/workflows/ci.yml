@@ -58,7 +58,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build domain package
-        run: pnpm --filter @proto-platform/domain build
+        run: |
+          rm -rf packages/domain/dist packages/domain/tsconfig.build.tsbuildinfo
+          pnpm --filter @proto-platform/domain build
 
   test-web:
     name: test web
@@ -133,7 +135,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build domain package
-        run: pnpm --filter @proto-platform/domain build
+        run: |
+          rm -rf packages/domain/dist packages/domain/tsconfig.build.tsbuildinfo
+          pnpm --filter @proto-platform/domain build
 
       - name: Test API
         run: pnpm --filter gradera-api test
@@ -161,7 +165,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build domain package
-        run: pnpm --filter @proto-platform/domain build
+        run: |
+          rm -rf packages/domain/dist packages/domain/tsconfig.build.tsbuildinfo
+          pnpm --filter @proto-platform/domain build
 
       - name: Build API
         run: pnpm --filter gradera-api build

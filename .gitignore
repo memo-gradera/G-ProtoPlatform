@@ -5,6 +5,8 @@ node_modules/
 !.env.example
 dist/
 **/dist/
+*.tsbuildinfo
+**/*.tsbuildinfo
 .turbo/
 **/.turbo/
 .DS_Store
