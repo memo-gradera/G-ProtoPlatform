@@ -82,3 +82,13 @@ prototypesRouter.post(
     ok(res, serializePrototype(prototype));
   }),
 );
+
+prototypesRouter.delete(
+  "/:id",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const id = parseParamsId(req.params);
+    await prototypesService.delete(req.user!, id);
+    ok(res, { success: true, id });
+  }),
+);

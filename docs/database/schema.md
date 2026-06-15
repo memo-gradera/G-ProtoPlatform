@@ -124,10 +124,16 @@ pnpm --filter gradera-api db:studio
 - Enable SSL: append `?sslmode=require` to connection string
 - Run `prisma migrate deploy` in release pipeline before app startup
 
+## Delete behavior
+
+- Ideas and prototypes use **hard delete** (no `deleted_at` column).
+- API writes audit events (`idea.delete`, `prototype.delete`) before removing rows.
+- Idea delete is rejected when linked prototypes exist (`related_idea_id`).
+- Prototype delete does not modify the related idea; dependent reviews/tag maps cascade.
+
 ## What is not implemented yet
 
 - Frontend wired to API repositories
 - Entra ID user provisioning on first login
 - Blob storage upload for attachments
 - Row-level security policies in PostgreSQL
-- Idea soft delete (`ideas` has no `deleted_at`; API performs hard delete with audit)

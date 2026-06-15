@@ -246,5 +246,11 @@ Outputs `/tmp/gradera-api-source.zip` with `dist/`, `prisma/`, `package.json`, `
 ## What is not implemented yet
 
 - Attachment upload routes
-- Soft delete for ideas (schema has no `deleted_at`)
 - Automatic deploy on merge to `main` (deploy workflow is manual `workflow_dispatch` only)
+
+## Delete behavior
+
+Ideas and prototypes use **hard delete** (no `deleted_at` column). Each delete writes an audit event (`idea.delete` / `prototype.delete`) before the row is removed.
+
+- Idea delete is blocked when any prototype references the idea via `related_idea_id`.
+- Prototype delete cascades reviews and tag maps; the related idea row is unchanged.

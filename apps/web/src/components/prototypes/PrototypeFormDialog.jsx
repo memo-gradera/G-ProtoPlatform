@@ -9,10 +9,21 @@ import { Label } from '@/components/ui/label';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { filesService } from '@/services/filesService';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/components/ui/use-toast';
-import { Upload, X } from 'lucide-react';
+import { Upload, X, Trash2 } from 'lucide-react';
 import { mergePrototypeForm } from '@/services/apiMappers';
 
 const STATUS_OPTIONS = [
@@ -28,7 +39,17 @@ const emptyProto = {
   demo_url: '', screenshot_url: '', tags: [], related_idea_id: '', description: ''
 };
 
-export default function PrototypeFormDialog({ open, onClose, onSave, prototype, loading, ideas = [] }) {
+export default function PrototypeFormDialog({
+  open,
+  onClose,
+  onSave,
+  onDelete,
+  prototype,
+  loading,
+  deleting = false,
+  canDelete = false,
+  ideas = [],
+}) {
   const [form, setForm] = useState(emptyProto);
   const [tagInput, setTagInput] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -191,11 +212,48 @@ export default function PrototypeFormDialog({ open, onClose, onSave, prototype, 
             )}
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => onSave(form)} disabled={loading || !form.name || !form.owner}>
-            {loading ? 'Saving...' : prototype ? 'Update' : 'Create'}
-          </Button>
+        <DialogFooter className="flex-row justify-between sm:justify-between">
+          <div>
+            {canDelete && prototype?.id && onDelete && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                    disabled={loading || deleting}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                    Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Prototype</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently remove &quot;{prototype.name}&quot;. This action cannot
+                      be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => onDelete(prototype.id)}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {deleting ? 'Deleting...' : 'Delete'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button onClick={() => onSave(form)} disabled={loading || deleting || !form.name || !form.owner}>
+              {loading ? 'Saving...' : prototype ? 'Update' : 'Create'}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

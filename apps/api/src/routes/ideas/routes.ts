@@ -102,7 +102,8 @@ ideasRouter.delete(
   "/:id",
   requireAuth,
   asyncHandler(async (req, res) => {
-    await ideasService.delete(req.user!, parseParamsId(req.params));
-    ok(res, { deleted: true });
+    const id = parseParamsId(req.params);
+    await ideasService.delete(req.user!, id);
+    ok(res, { success: true, id });
   }),
 );

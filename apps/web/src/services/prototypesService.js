@@ -123,4 +123,22 @@ export const prototypesService = {
     }
     return base44.entities.Prototype.update(id, updatePayload);
   },
+
+  async remove(id) {
+    const prototype = isDevDataBypassEnabled()
+      ? devDataStore.getPrototype(id)
+      : isApiBackendEnabled()
+        ? normalizePrototype(await apiClient.get(`/prototypes/${id}`))
+        : await base44.entities.Prototype.get(id);
+    await assertCanPerformAction('prototype.delete', { prototype });
+    if (isDevDataBypassEnabled()) {
+      devDataStore.deletePrototype(id);
+      return;
+    }
+    if (isApiBackendEnabled()) {
+      await apiClient.delete(`/prototypes/${id}`);
+      return;
+    }
+    return base44.entities.Prototype.delete(id);
+  },
 };

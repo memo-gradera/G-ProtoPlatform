@@ -8,7 +8,7 @@ import {
 } from '@/domain/kanbanTransitionAuth';
 import { ideasService } from '@/services/ideasService';
 import { invalidateIdeas, queryKeys } from '@/lib/queryKeys';
-import { showAccessDeniedToast, isRbacError } from '@/lib/accessDeniedToast';
+import { showAccessDeniedToast, isRbacError, showDeleteErrorToast } from '@/lib/accessDeniedToast';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/components/ui/use-toast';
 import { DragDropContext } from '@hello-pangea/dnd';
@@ -43,6 +43,7 @@ export default function KanbanBoard() {
 
   const canCreate = canPerformAction('idea.create');
   const canEditIdea = (idea) => canPerformAction('idea.edit', { idea });
+  const canDeleteIdea = (idea) => canPerformAction('idea.delete', { idea });
   const canDragIdea = (idea) => hasAnyDraggableTarget(idea, canPerformAction, hasPermission);
 
   const ideasListKey = queryKeys.ideas.list();
@@ -82,6 +83,19 @@ export default function KanbanBoard() {
     mutationFn: ({ id, status }) => ideasService.transitionStatus(id, status),
     onSuccess: () => invalidateIdeas(queryClient),
     onError: handleMutationError,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => ideasService.remove(id),
+    onSuccess: () => {
+      invalidateIdeas(queryClient);
+      setDetailIdea(null);
+      toast({
+        title: 'Idea deleted',
+        description: 'The idea was permanently removed.',
+      });
+    },
+    onError: (error) => showDeleteErrorToast(error, 'idea'),
   });
 
   const handleDragEnd = (result) => {
@@ -163,10 +177,13 @@ export default function KanbanBoard() {
         open={Boolean(detailIdea)}
         onClose={() => setDetailIdea(null)}
         onSave={(data) => saveMutation.mutate(data)}
+        onDelete={(id) => deleteMutation.mutate(id)}
         idea={detailIdea}
         loading={saveMutation.isPending}
+        deleting={deleteMutation.isPending}
         readOnly={detailIdea ? !canEditIdea(detailIdea) : true}
         canChangeStatus={detailIdea ? canDragIdea(detailIdea) : false}
+        canDelete={detailIdea ? canDeleteIdea(detailIdea) : false}
       />
     </div>
   );

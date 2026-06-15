@@ -87,4 +87,26 @@ export const prototypesRepository = {
       return prototype;
     });
   },
+
+  async countByRelatedIdeaId(relatedIdeaId: string) {
+    return prisma.prototype.count({
+      where: { relatedIdeaId },
+    });
+  },
+
+  async delete(id: string, actorUserId: string, before: Record<string, unknown>) {
+    return prisma.$transaction(async (tx) => {
+      await tx.auditEvent.create({
+        data: {
+          actorUserId,
+          action: "prototype.delete",
+          entityType: "prototype",
+          entityId: id,
+          beforeJson: before as Prisma.InputJsonValue,
+        },
+      });
+
+      await tx.prototype.delete({ where: { id } });
+    });
+  },
 };

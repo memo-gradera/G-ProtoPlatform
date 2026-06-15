@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ideasService } from '@/services/ideasService';
 import { invalidateIdeas, queryKeys } from '@/lib/queryKeys';
-import { showAccessDeniedToast, isRbacError } from '@/lib/accessDeniedToast';
+import { showAccessDeniedToast, isRbacError, showDeleteErrorToast } from '@/lib/accessDeniedToast';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/components/ui/use-toast';
 import PageHeader from '@/components/shared/PageHeader';
@@ -60,11 +60,15 @@ export default function RejectedArchive() {
 
   const deleteMutation = useMutation({
     mutationFn: (id) => ideasService.remove(id),
-    onSuccess: () => invalidateIdeas(queryClient),
-    onError: showAccessDeniedToast,
+    onSuccess: () => {
+      invalidateIdeas(queryClient);
+      toast({
+        title: 'Idea deleted',
+        description: 'The idea was permanently removed.',
+      });
+    },
+    onError: (error) => showDeleteErrorToast(error, 'idea'),
   });
-
-  const rejected = ideas.filter(i => i.status === 'rejected');
   const filtered = rejected.filter(i =>
     !search || i.solution_name?.toLowerCase().includes(search.toLowerCase()) ||
     getIdeaOwnerLabel(i).toLowerCase().includes(search.toLowerCase())
@@ -162,9 +166,10 @@ export default function RejectedArchive() {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Delete this idea?</AlertDialogTitle>
+                                <AlertDialogTitle>Delete Idea</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  This will permanently remove "{idea.solution_name}" from the archive.
+                                  This will permanently remove &quot;{idea.solution_name}&quot;. This
+                                  action cannot be undone.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>

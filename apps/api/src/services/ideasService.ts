@@ -1,12 +1,9 @@
-import {
-  canPerformAction,
-  validateIdeaTransition,
-  WorkflowValidationError,
-} from "@proto-platform/domain";
+import { canPerformAction, validateIdeaTransition, WorkflowValidationError } from "@proto-platform/domain";
 import type { IdeaStatus } from "@proto-platform/contracts";
 import { BadRequestError, ForbiddenError, NotFoundError } from "../errors.js";
 import type { AuthenticatedUser } from "../types/express.js";
 import { ideasRepository } from "../repositories/ideasRepository.js";
+import { prototypesRepository } from "../repositories/prototypesRepository.js";
 
 function assertIdeaAccess(
   user: AuthenticatedUser,
@@ -185,8 +182,16 @@ export const ideasService = {
 
     assertIdeaAccess(user, "idea.delete", existing);
 
+    const linkedPrototypeCount = await prototypesRepository.countByRelatedIdeaId(id);
+    if (linkedPrototypeCount > 0) {
+      throw new BadRequestError(
+        "Cannot delete idea with linked prototypes. Delete or archive prototypes first.",
+      );
+    }
+
     // Hard delete — schema has no deleted_at column (see docs/database/schema.md).
     await ideasRepository.delete(id, user.id, existing);
+    return id;
   },
 
   async listStatusHistory(ideaId: string) {

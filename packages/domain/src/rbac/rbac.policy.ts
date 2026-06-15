@@ -18,6 +18,7 @@ export const PERMISSIONS = {
   PROTOTYPE_EDIT: "prototype:edit",
   PROTOTYPE_PUBLISH: "prototype:publish",
   PROTOTYPE_ARCHIVE: "prototype:archive",
+  PROTOTYPE_DELETE: "prototype:delete",
   REVIEW_VIEW: "review:view",
   REVIEW_APPROVE: "review:approve",
   REVIEW_REJECT: "review:reject",
@@ -36,11 +37,13 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly Permission[]> = {
     PERMISSIONS.IDEA_CREATE,
     PERMISSIONS.IDEA_EDIT,
     PERMISSIONS.IDEA_TRANSITION,
+    PERMISSIONS.IDEA_DELETE,
     PERMISSIONS.IDEA_REOPEN_REJECTED,
     PERMISSIONS.PROTOTYPE_CREATE,
     PERMISSIONS.PROTOTYPE_EDIT,
     PERMISSIONS.PROTOTYPE_PUBLISH,
     PERMISSIONS.PROTOTYPE_ARCHIVE,
+    PERMISSIONS.PROTOTYPE_DELETE,
     PERMISSIONS.REVIEW_VIEW,
     PERMISSIONS.REVIEW_APPROVE,
     PERMISSIONS.REVIEW_REJECT,
@@ -52,6 +55,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly Permission[]> = {
     PERMISSIONS.PROTOTYPE_CREATE,
     PERMISSIONS.PROTOTYPE_EDIT,
     PERMISSIONS.PROTOTYPE_PUBLISH,
+    PERMISSIONS.PROTOTYPE_DELETE,
     PERMISSIONS.DASHBOARD_VIEW,
   ],
   executive_reviewer: [
@@ -108,9 +112,13 @@ export interface TransitionResource {
 }
 
 export interface PrototypeSaveResource {
-  prototype?: { id?: string };
+  prototype?: { id?: string; ownerId?: string };
   previousStatus?: string;
   nextStatus?: string;
+}
+
+export interface PrototypeResource {
+  ownerId?: string;
 }
 
 export type RbacAction =
@@ -126,12 +134,26 @@ export type RbacAction =
   | "prototype.edit"
   | "prototype.publish"
   | "prototype.archive"
+  | "prototype.delete"
   | "prototype.save"
   | "admin.manage_users";
 
 function matchesOwner(user: RbacUser, idea?: IdeaResource): boolean {
   if (!user?.id || !idea?.ownerId) return false;
   return idea.ownerId === user.id;
+}
+
+function matchesPrototypeOwner(user: RbacUser, prototype?: PrototypeResource): boolean {
+  if (!user?.id || !prototype?.ownerId) return false;
+  return prototype.ownerId === user.id;
+}
+
+function canDeletePrototype(user: RbacUser, prototype?: PrototypeResource): boolean {
+  if (!hasPermission(user, PERMISSIONS.PROTOTYPE_DELETE)) return false;
+  if (getUserRole(user) === "developer") {
+    return matchesPrototypeOwner(user, prototype);
+  }
+  return true;
 }
 
 function canEditIdea(user: RbacUser, idea?: IdeaResource): boolean {
@@ -167,7 +189,7 @@ export function canPerformAction(
   resource: {
     idea?: IdeaResource;
     targetStatus?: string;
-    prototype?: { id?: string };
+    prototype?: { id?: string; ownerId?: string };
     previousStatus?: string;
     nextStatus?: string;
   } = {},
@@ -211,6 +233,8 @@ export function canPerformAction(
       return hasPermission(user, PERMISSIONS.PROTOTYPE_PUBLISH);
     case "prototype.archive":
       return hasPermission(user, PERMISSIONS.PROTOTYPE_ARCHIVE);
+    case "prototype.delete":
+      return canDeletePrototype(user, resource.prototype);
     case "prototype.save": {
       const { prototype, previousStatus, nextStatus } = resource;
       if (!prototype?.id) {

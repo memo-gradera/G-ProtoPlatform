@@ -18,6 +18,7 @@ export const PERMISSIONS = Object.freeze({
   PROTOTYPE_EDIT: 'prototype:edit',
   PROTOTYPE_PUBLISH: 'prototype:publish',
   PROTOTYPE_ARCHIVE: 'prototype:archive',
+  PROTOTYPE_DELETE: 'prototype:delete',
   REVIEW_VIEW: 'review:view',
   REVIEW_APPROVE: 'review:approve',
   REVIEW_REJECT: 'review:reject',
@@ -34,11 +35,13 @@ export const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.IDEA_CREATE,
     PERMISSIONS.IDEA_EDIT,
     PERMISSIONS.IDEA_TRANSITION,
+    PERMISSIONS.IDEA_DELETE,
     PERMISSIONS.IDEA_REOPEN_REJECTED,
     PERMISSIONS.PROTOTYPE_CREATE,
     PERMISSIONS.PROTOTYPE_EDIT,
     PERMISSIONS.PROTOTYPE_PUBLISH,
     PERMISSIONS.PROTOTYPE_ARCHIVE,
+    PERMISSIONS.PROTOTYPE_DELETE,
     PERMISSIONS.REVIEW_VIEW,
     PERMISSIONS.REVIEW_APPROVE,
     PERMISSIONS.REVIEW_REJECT,
@@ -50,6 +53,7 @@ export const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.PROTOTYPE_CREATE,
     PERMISSIONS.PROTOTYPE_EDIT,
     PERMISSIONS.PROTOTYPE_PUBLISH,
+    PERMISSIONS.PROTOTYPE_DELETE,
     PERMISSIONS.DASHBOARD_VIEW,
   ],
   executive_reviewer: [
@@ -125,6 +129,36 @@ function matchesOwner(user, idea) {
     ownerEmail === email ||
     ownerName === name
   );
+}
+
+function matchesPrototypeOwner(user, prototype) {
+  if (!user || !prototype) return false;
+
+  const email = user.email?.toLowerCase()?.trim();
+  const name = user.full_name?.toLowerCase()?.trim();
+  const ownerId = prototype.owner_id;
+  const ownerEmail = prototype.owner_email?.toLowerCase()?.trim();
+  const ownerName = prototype.owner_name?.toLowerCase()?.trim();
+  const ownerDisplay = getIdeaOwnerLabel(prototype).toLowerCase().trim();
+
+  if (ownerId && user.id && ownerId === user.id) {
+    return true;
+  }
+
+  return (
+    ownerDisplay === email ||
+    ownerDisplay === name ||
+    ownerEmail === email ||
+    ownerName === name
+  );
+}
+
+function canDeletePrototype(user, prototype) {
+  if (!hasPermission(user, PERMISSIONS.PROTOTYPE_DELETE)) return false;
+  if (getUserRole(user) === 'developer') {
+    return matchesPrototypeOwner(user, prototype);
+  }
+  return true;
 }
 
 function canEditIdea(user, idea) {
@@ -211,6 +245,9 @@ export function canPerformAction(user, action, resource = {}) {
 
     case 'prototype.archive':
       return hasPermission(user, PERMISSIONS.PROTOTYPE_ARCHIVE);
+
+    case 'prototype.delete':
+      return canDeletePrototype(user, resource.prototype);
 
     case 'admin.manage_users':
       return hasPermission(user, PERMISSIONS.ADMIN_MANAGE_USERS);

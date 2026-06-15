@@ -17,6 +17,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Trash2 } from 'lucide-react';
 import PrototypeBlueprintSection from '@/components/shared/PrototypeBlueprintSection';
 import IdeaStatusHistorySection from '@/components/shared/IdeaStatusHistorySection';
 import { mergeIdeaForm } from '@/components/shared/ideaFormConfig';
@@ -25,10 +37,13 @@ export default function IdeaDetailDrawer({
   open,
   onClose,
   onSave,
+  onDelete,
   idea,
   loading,
+  deleting = false,
   readOnly = false,
   canChangeStatus = true,
+  canDelete = false,
 }) {
   const [form, setForm] = useState(mergeIdeaForm(null));
 
@@ -220,18 +235,55 @@ export default function IdeaDetailDrawer({
           </div>
         </div>
 
-        <DrawerFooter className="shrink-0 border-t border-border/40 bg-background px-6 py-4 flex-row justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          {!readOnly && (
-            <Button
-              onClick={handleSave}
-              disabled={loading || !form.solution_name?.trim() || !form.owner?.trim()}
-            >
-              {loading ? 'Saving...' : 'Save Changes'}
+        <DrawerFooter className="shrink-0 border-t border-border/40 bg-background px-6 py-4 flex-row justify-between gap-2">
+          <div>
+            {canDelete && idea?.id && onDelete && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                    disabled={loading || deleting}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                    Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Idea</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently remove &quot;{idea.solution_name}&quot;. This action
+                      cannot be undone. Ideas with linked prototypes cannot be deleted.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => onDelete(idea.id)}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {deleting ? 'Deleting...' : 'Delete'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
             </Button>
-          )}
+            {!readOnly && (
+              <Button
+                onClick={handleSave}
+                disabled={loading || deleting || !form.solution_name?.trim() || !form.owner?.trim()}
+              >
+                {loading ? 'Saving...' : 'Save Changes'}
+              </Button>
+            )}
+          </div>
         </DrawerFooter>
       </DrawerContent>
     </Drawer>

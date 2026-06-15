@@ -5,6 +5,7 @@ import {
 } from "@proto-platform/domain";
 import { BadRequestError, ForbiddenError } from "../src/errors.js";
 import { ideasRepository } from "../src/repositories/ideasRepository.js";
+import { prototypesRepository } from "../src/repositories/prototypesRepository.js";
 import { ideasService } from "../src/services/ideasService.js";
 
 vi.mock("../src/repositories/ideasRepository.js", () => ({
@@ -19,6 +20,14 @@ vi.mock("../src/repositories/ideasRepository.js", () => ({
   },
 }));
 
+vi.mock("../src/repositories/prototypesRepository.js", () => ({
+  prototypesRepository: {
+    getById: vi.fn(),
+    countByRelatedIdeaId: vi.fn(),
+    delete: vi.fn(),
+  },
+}));
+
 const adminUser = {
   id: "admin-user-id",
   email: "admin@gradera.local",
@@ -29,6 +38,18 @@ const viewerUser = {
   id: "viewer-user-id",
   email: "viewer@gradera.local",
   role: "viewer" as const,
+};
+
+const innovationLeadUser = {
+  id: "lead-user-id",
+  email: "lead@gradera.local",
+  role: "innovation_lead" as const,
+};
+
+const executiveReviewerUser = {
+  id: "exec-user-id",
+  email: "exec@gradera.local",
+  role: "executive_reviewer" as const,
 };
 
 const baseIdea = {
@@ -147,6 +168,73 @@ describe("validateIdeaTransition domain rules", () => {
   });
 });
 
+describe("ideasService.delete", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("allows admin to delete an idea", async () => {
+    vi.mocked(ideasRepository.getById).mockResolvedValue(baseIdea as never);
+    vi.mocked(prototypesRepository.countByRelatedIdeaId).mockResolvedValue(0);
+
+    const id = await ideasService.delete(adminUser, "idea-1");
+
+    expect(id).toBe("idea-1");
+    expect(ideasRepository.delete).toHaveBeenCalledWith(
+      "idea-1",
+      adminUser.id,
+      baseIdea,
+    );
+  });
+
+  it("allows innovation_lead to delete an idea", async () => {
+    vi.mocked(ideasRepository.getById).mockResolvedValue(baseIdea as never);
+    vi.mocked(prototypesRepository.countByRelatedIdeaId).mockResolvedValue(0);
+
+    await expect(
+      ideasService.delete(innovationLeadUser, "idea-1"),
+    ).resolves.toBe("idea-1");
+  });
+
+  it("rejects delete when viewer lacks permission", async () => {
+    vi.mocked(ideasRepository.getById).mockResolvedValue(baseIdea as never);
+
+    await expect(
+      ideasService.delete(viewerUser, "idea-1"),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("rejects delete when executive_reviewer lacks permission", async () => {
+    vi.mocked(ideasRepository.getById).mockResolvedValue(baseIdea as never);
+
+    await expect(
+      ideasService.delete(executiveReviewerUser, "idea-1"),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("returns 404 when idea is missing", async () => {
+    vi.mocked(ideasRepository.getById).mockResolvedValue(null);
+
+    await expect(
+      ideasService.delete(adminUser, "missing"),
+    ).rejects.toMatchObject({ name: "NotFoundError" });
+  });
+
+  it("blocks delete when linked prototypes exist", async () => {
+    vi.mocked(ideasRepository.getById).mockResolvedValue(baseIdea as never);
+    vi.mocked(prototypesRepository.countByRelatedIdeaId).mockResolvedValue(2);
+
+    await expect(
+      ideasService.delete(adminUser, "idea-1"),
+    ).rejects.toMatchObject({
+      name: "BadRequestError",
+      message:
+        "Cannot delete idea with linked prototypes. Delete or archive prototypes first.",
+    });
+    expect(ideasRepository.delete).not.toHaveBeenCalled();
+  });
+});
+
 describe("RBAC canPerformAction", () => {
   it("viewer cannot mutate ideas", () => {
     expect(canPerformAction(viewerUser, "idea.create")).toBe(false);
@@ -160,5 +248,11 @@ describe("RBAC canPerformAction", () => {
     expect(canPerformAction(adminUser, "idea.delete", { idea: baseIdea })).toBe(
       true,
     );
+  });
+
+  it("innovation_lead can delete ideas", () => {
+    expect(
+      canPerformAction(innovationLeadUser, "idea.delete", { idea: baseIdea }),
+    ).toBe(true);
   });
 });

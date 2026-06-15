@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ideasService } from '@/services/ideasService';
 import { prototypesService } from '@/services/prototypesService';
 import { invalidateIdeas, invalidatePrototypes, queryKeys } from '@/lib/queryKeys';
-import { showAccessDeniedToast, isRbacError } from '@/lib/accessDeniedToast';
+import { showAccessDeniedToast, isRbacError, showDeleteErrorToast } from '@/lib/accessDeniedToast';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/components/ui/use-toast';
 import PageHeader from '@/components/shared/PageHeader';
@@ -38,6 +38,8 @@ export default function PrototypeCatalog() {
   const canCreate = canPerformAction('prototype.create');
   const canEditPrototype = (prototype) =>
     canPerformAction('prototype.edit', { prototype });
+  const canDeletePrototype = (prototype) =>
+    canPerformAction('prototype.delete', { prototype });
 
   const { data: prototypes = [], isLoading } = useQuery({
     queryKey: queryKeys.prototypes.list(),
@@ -60,6 +62,20 @@ export default function PrototypeCatalog() {
       setEditing(null);
     },
     onError: handleSaveError,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => prototypesService.remove(id),
+    onSuccess: () => {
+      invalidatePrototypes(queryClient);
+      setDialogOpen(false);
+      setEditing(null);
+      toast({
+        title: 'Prototype deleted',
+        description: 'The prototype was permanently removed.',
+      });
+    },
+    onError: (error) => showDeleteErrorToast(error, 'prototype'),
   });
 
   const filtered = prototypes.filter(p => {
@@ -145,8 +161,11 @@ export default function PrototypeCatalog() {
         open={dialogOpen}
         onClose={() => { setDialogOpen(false); setEditing(null); }}
         onSave={(data) => saveMutation.mutate(data)}
+        onDelete={(id) => deleteMutation.mutate(id)}
         prototype={editing}
         loading={saveMutation.isPending}
+        deleting={deleteMutation.isPending}
+        canDelete={editing ? canDeletePrototype(editing) : false}
         ideas={ideas}
       />
     </div>

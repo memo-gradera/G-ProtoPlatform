@@ -132,4 +132,20 @@ export const prototypesService = {
       "prototype.archive",
     );
   },
+
+  async delete(user: AuthenticatedUser, id: string) {
+    const existing = await prototypesRepository.getById(id);
+    if (!existing) throw new NotFoundError("Prototype not found.");
+
+    if (
+      !canPerformAction(user, "prototype.delete", {
+        prototype: { ownerId: existing.ownerId },
+      })
+    ) {
+      throw new ForbiddenError();
+    }
+
+    await prototypesRepository.delete(id, user.id, existing);
+    return id;
+  },
 };

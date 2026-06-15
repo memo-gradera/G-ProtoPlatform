@@ -42,6 +42,7 @@ export const queryKeys = {
 export function invalidateIdeas(queryClient) {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: queryKeys.ideas.all }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.ideas.kpis }),
     queryClient.invalidateQueries({ queryKey: queryKeys.ideaStatusHistory.all }),
   ]);
 }

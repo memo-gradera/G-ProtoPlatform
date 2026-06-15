@@ -214,6 +214,12 @@ export const devDataStore = {
 
   deleteIdea(id) {
     const state = readState();
+    const hasLinked = state.prototypes.some((item) => item.related_idea_id === id);
+    if (hasLinked) {
+      throw new Error(
+        'Cannot delete idea with linked prototypes. Delete or archive prototypes first.',
+      );
+    }
     state.ideas = state.ideas.filter((item) => item.id !== id);
     state.history = state.history.filter((entry) => entry.idea_id !== id);
     writeState(state);
@@ -256,6 +262,12 @@ export const devDataStore = {
     state.prototypes[index] = updated;
     writeState(state);
     return { ...updated };
+  },
+
+  deletePrototype(id) {
+    const state = readState();
+    state.prototypes = state.prototypes.filter((item) => item.id !== id);
+    writeState(state);
   },
 
   listUsers(filters = {}) {
