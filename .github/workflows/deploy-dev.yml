@@ -2,7 +2,7 @@
 #
 # Required GitHub secrets:
 #   AZURE_STATIC_WEB_APPS_API_TOKEN — Static Web App deployment token
-#   AZURE_WEBAPP_PUBLISH_PROFILE — App Service publish profile (Download publish profile)
+#   AZURE_WEBAPP_PUBLISH_PROFILE — App Service publish profile for SCM restart (Download publish profile)
 #   DOCKERHUB_USERNAME, DOCKERHUB_TOKEN — Docker Hub push (memogradera/gradera-api)
 #   DATABASE_URL — optional; required when run_migrations is enabled
 #
@@ -117,12 +117,98 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: pnpm --filter gradera-api exec prisma migrate deploy
 
-      - name: Deploy API container to Azure App Service
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          images: memogradera/gradera-api:latest
+      - name: Restart Azure App Service via SCM
+        env:
+          AZURE_WEBAPP_PUBLISH_PROFILE: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        run: |
+          set -euo pipefail
+
+          PROFILE_FILE="$(mktemp)"
+          SCM_USER_FILE="$(mktemp)"
+          SCM_PASS_FILE="$(mktemp)"
+          trap 'rm -f "$PROFILE_FILE" "$SCM_USER_FILE" "$SCM_PASS_FILE"' EXIT
+
+          printf '%s' "$AZURE_WEBAPP_PUBLISH_PROFILE" > "$PROFILE_FILE"
+
+          SCM_HOST="$(
+            python3 - "$PROFILE_FILE" "$SCM_USER_FILE" "$SCM_PASS_FILE" <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          profile_path, user_path, pass_path = sys.argv[1:4]
+          root = ET.parse(profile_path).getroot()
+          profiles = root.findall("publishProfile")
+
+          selected = None
+          for profile in profiles:
+              method = profile.get("publishMethod", "")
+              url = profile.get("publishUrl", "")
+              if method == "MSDeploy":
+                  selected = profile
+                  break
+              if ".scm." in url and selected is None:
+                  selected = profile
+
+          if selected is None and profiles:
+              selected = profiles[0]
+
+          if selected is None:
+              raise SystemExit("ERROR: No publish profile entry found in publish profile XML")
+
+          publish_url = selected.get("publishUrl", "")
+          username = selected.get("userName", "")
+          password = selected.get("userPWD", "")
+
+          if not publish_url or not username or not password:
+              raise SystemExit(
+                  "ERROR: publish profile missing publishUrl, userName, or userPWD"
+              )
+
+          Path(user_path).write_text(username)
+          Path(pass_path).write_text(password)
+
+          host = publish_url.split(":")[0]
+          print(host)
+          PY
+          )"
+
+          SCM_URL="https://${SCM_HOST}"
+          SCM_USER="$(cat "$SCM_USER_FILE")"
+          SCM_PASS="$(cat "$SCM_PASS_FILE")"
+
+          restart_via_scm() {
+            local endpoint="$1"
+            local response http_code body
+
+            response="$(
+              curl --silent --show-error --write-out $'\n%{http_code}' \
+                -X POST \
+                -u "${SCM_USER}:${SCM_PASS}" \
+                "${SCM_URL}${endpoint}"
+            )"
+            http_code="${response##*$'\n'}"
+            body="${response%$'\n'*}"
+
+            echo "SCM POST ${endpoint} -> HTTP ${http_code}"
+            if [ -n "$body" ]; then
+              echo "$body"
+            fi
+
+            if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+              return 0
+            fi
+            return 1
+          }
+
+          if restart_via_scm "/api/app/restart"; then
+            echo "App Service restart succeeded."
+          elif restart_via_scm "/api/processes/-1"; then
+            echo "App Service process restart succeeded."
+          else
+            echo "ERROR: Failed to restart App Service via SCM (${SCM_URL})."
+            exit 1
+          fi
 
       - name: Verify API health endpoint
         run: |
