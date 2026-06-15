@@ -438,6 +438,10 @@ export function normalizeApiUser(user) {
     full_name: user.full_name,
     role: user.role,
     roles: user.roles,
+    status: user.status ?? 'active',
+    created_at: user.created_at ?? user.created_date ?? null,
+    updated_at: user.updated_at ?? user.updated_date ?? null,
+    last_login_at: user.last_login_at ?? null,
   };
 }
 

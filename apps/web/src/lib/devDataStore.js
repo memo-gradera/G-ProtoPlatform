@@ -69,35 +69,50 @@ function buildInitialState() {
       email: 'memo@local.dev',
       full_name: 'Memo Developer',
       role: 'admin',
+      status: 'active',
       department: 'Innovation',
+      created_at: now,
+      last_login_at: now,
     },
     {
       id: 'user-lead',
       email: 'lead@example.com',
       full_name: 'Alex Rivera',
       role: 'innovation_lead',
+      status: 'active',
       department: 'Innovation',
+      created_at: now,
+      last_login_at: null,
     },
     {
       id: 'user-dev',
       email: 'dev@example.com',
       full_name: 'Dev Owner',
       role: 'developer',
+      status: 'active',
       department: 'Engineering',
+      created_at: now,
+      last_login_at: null,
     },
     {
       id: 'user-exec',
       email: 'exec@example.com',
       full_name: 'Taylor Brooks',
       role: 'executive_reviewer',
+      status: 'active',
       department: 'Executive',
+      created_at: now,
+      last_login_at: null,
     },
     {
       id: 'user-viewer',
       email: 'viewer@example.com',
       full_name: 'Sam Patel',
       role: 'viewer',
+      status: 'active',
       department: 'Operations',
+      created_at: now,
+      last_login_at: null,
     },
   ];
 
@@ -243,19 +258,95 @@ export const devDataStore = {
     return { ...updated };
   },
 
-  listUsers() {
-    return readState().users.map((user) => ({ ...user }));
+  listUsers(filters = {}) {
+    let users = readState().users.map((user) => ({ ...user }));
+
+    if (filters.search) {
+      const term = filters.search.toLowerCase();
+      users = users.filter(
+        (user) =>
+          user.full_name?.toLowerCase().includes(term) ||
+          user.email?.toLowerCase().includes(term),
+      );
+    }
+
+    if (filters.role) {
+      users = users.filter((user) => user.role === filters.role);
+    }
+
+    if (filters.status) {
+      users = users.filter((user) => user.status === filters.status);
+    }
+
+    return users;
   },
 
-  updateUserRole(id, role) {
+  createUser(payload) {
+    const state = readState();
+    const now = new Date().toISOString();
+    const normalizedEmail = payload.email.toLowerCase();
+
+    if (state.users.some((user) => user.email?.toLowerCase() === normalizedEmail)) {
+      throw new Error('A user with this email already exists.');
+    }
+
+    const user = {
+      id: generateId('user'),
+      email: normalizedEmail,
+      full_name: payload.full_name,
+      role: payload.role || 'viewer',
+      status: payload.status || 'pending',
+      created_at: now,
+      updated_at: now,
+      last_login_at: null,
+    };
+
+    state.users.push(user);
+    writeState(state);
+    return { ...user };
+  },
+
+  updateUser(id, payload) {
     const state = readState();
     const index = state.users.findIndex((user) => user.id === id);
     if (index === -1) {
       throw new Error(`User not found: ${id}`);
     }
-    state.users[index] = { ...state.users[index], role };
+
+    const updated = {
+      ...state.users[index],
+      ...(payload.full_name !== undefined ? { full_name: payload.full_name } : {}),
+      ...(payload.role !== undefined ? { role: payload.role } : {}),
+      updated_at: new Date().toISOString(),
+      id,
+    };
+
+    state.users[index] = updated;
     writeState(state);
-    return { ...state.users[index] };
+    return { ...updated };
+  },
+
+  updateUserStatus(id, status) {
+    const state = readState();
+    const index = state.users.findIndex((user) => user.id === id);
+    if (index === -1) {
+      throw new Error(`User not found: ${id}`);
+    }
+
+    const updated = {
+      ...state.users[index],
+      status,
+      updated_at: new Date().toISOString(),
+      id,
+    };
+
+    state.users[index] = updated;
+    writeState(state);
+    return { ...updated };
+  },
+
+  updateUserRole(id, role) {
+    return this.updateUser(id, { role });
   },
 
   listHistory({ sort = '-changed_at', limit = 1000 } = {}) {

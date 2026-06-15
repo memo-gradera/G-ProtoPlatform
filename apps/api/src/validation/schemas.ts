@@ -93,6 +93,38 @@ export const updateUserRoleSchema = z.object({
   role: appRole,
 });
 
+const userStatus = z.enum(["active", "inactive", "pending", "suspended"]);
+
+export const createAdminUserSchema = z.object({
+  email: z.string().trim().email().max(320),
+  full_name: z.string().trim().min(1).max(255),
+  role: appRole,
+  status: userStatus.optional().default("pending"),
+});
+
+export const updateAdminUserSchema = z
+  .object({
+    full_name: z.string().trim().min(1).max(255).optional(),
+    role: appRole.optional(),
+  })
+  .refine((data) => data.full_name !== undefined || data.role !== undefined, {
+    message: "At least one of full_name or role is required.",
+  });
+
+export const updateAdminUserStatusSchema = z.object({
+  status: userStatus,
+});
+
+export const listAdminUsersQuerySchema = z.object({
+  search: z.string().trim().optional(),
+  role: appRole.optional(),
+  status: userStatus.optional(),
+});
+
+export function parseQuery<T>(schema: z.ZodSchema<T>, query: unknown): T {
+  return schema.parse(query);
+}
+
 export function parseBody<T>(schema: z.ZodSchema<T>, body: unknown): T {
   return schema.parse(body);
 }

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { adminRouter } from "./admin/routes.js";
 import { authRouter } from "./auth/routes.js";
 import { dashboardRouter } from "./dashboard/routes.js";
 import { filesRouter } from "./files/routes.js";
@@ -11,6 +12,7 @@ export function createApiRouter() {
   const router = Router();
 
   router.use("/auth", authRouter);
+  router.use("/admin", adminRouter);
   router.use("/users", usersRouter);
   router.use("/ideas", ideasRouter);
   router.use("/prototypes", prototypesRouter);

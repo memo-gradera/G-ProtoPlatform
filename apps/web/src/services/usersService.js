@@ -6,6 +6,15 @@ import { isApiBackendEnabled } from '@/services/backendMode';
 import { apiClient } from '@/services/apiClient';
 import { normalizeApiUser } from '@/services/apiMappers';
 
+function buildAdminUsersQuery(filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.search) params.set('search', filters.search);
+  if (filters.role) params.set('role', filters.role);
+  if (filters.status) params.set('status', filters.status);
+  const query = params.toString();
+  return query ? `?${query}` : '';
+}
+
 export const usersService = {
   async me() {
     if (isDevDataBypassEnabled()) {
@@ -26,12 +35,14 @@ export const usersService = {
     return this.enrichAuthUserWithRole(authUser);
   },
 
-  list() {
+  list(filters = {}) {
     if (isDevDataBypassEnabled()) {
-      return Promise.resolve(devDataStore.listUsers());
+      return Promise.resolve(devDataStore.listUsers(filters));
     }
     if (isApiBackendEnabled()) {
-      return apiClient.get('/users').then((users) => users.map(normalizeApiUser));
+      return apiClient
+        .get(`/admin/users${buildAdminUsersQuery(filters)}`)
+        .then((users) => users.map(normalizeApiUser));
     }
     const client = getBase44Client();
     if (!client) {
@@ -113,20 +124,54 @@ export const usersService = {
     }
   },
 
-  async updateRole(id, role) {
+  async createUser(payload) {
     const { assertCanPerformAction } = await import('@/lib/permissionGuard');
     await assertCanPerformAction('admin.manage_users');
     if (isDevDataBypassEnabled()) {
-      return devDataStore.updateUserRole(id, role);
+      return devDataStore.createUser(payload);
     }
     if (isApiBackendEnabled()) {
-      const updated = await apiClient.patch(`/users/${id}/role`, { role });
+      const created = await apiClient.post('/admin/users', payload);
+      return normalizeApiUser(created);
+    }
+    const client = getBase44Client();
+    if (!client) {
+      throw new Error('User management is unavailable in the current backend mode.');
+    }
+    return client.entities.User.create(payload);
+  },
+
+  async updateUser(id, payload) {
+    const { assertCanPerformAction } = await import('@/lib/permissionGuard');
+    await assertCanPerformAction('admin.manage_users');
+    if (isDevDataBypassEnabled()) {
+      return devDataStore.updateUser(id, payload);
+    }
+    if (isApiBackendEnabled()) {
+      const updated = await apiClient.patch(`/admin/users/${id}`, payload);
       return normalizeApiUser(updated);
     }
     const client = getBase44Client();
     if (!client) {
       throw new Error('User management is unavailable in the current backend mode.');
     }
-    return client.entities.User.update(id, { role });
+    return client.entities.User.update(id, payload);
+  },
+
+  async updateUserStatus(id, status) {
+    const { assertCanPerformAction } = await import('@/lib/permissionGuard');
+    await assertCanPerformAction('admin.manage_users');
+    if (isDevDataBypassEnabled()) {
+      return devDataStore.updateUserStatus(id, status);
+    }
+    if (isApiBackendEnabled()) {
+      const updated = await apiClient.patch(`/admin/users/${id}/status`, { status });
+      return normalizeApiUser(updated);
+    }
+    throw new Error('User status management is unavailable in the current backend mode.');
+  },
+
+  async updateRole(id, role) {
+    return this.updateUser(id, { role });
   },
 };

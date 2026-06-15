@@ -455,3 +455,32 @@ describe('prototypesService create normalization in API mode', () => {
     expect(typeof created.owner).toBe('string');
   });
 });
+
+describe('normalizeApiUser', () => {
+  it('maps admin user metadata fields from API snake_case', async () => {
+    const { normalizeApiUser } = await import('@/services/apiMappers.js');
+    expect(
+      normalizeApiUser({
+        id: 'user-1',
+        email: 'admin@gradera.local',
+        full_name: 'Local Admin',
+        role: 'admin',
+        roles: ['admin'],
+        status: 'active',
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-02T00:00:00.000Z',
+        last_login_at: null,
+      }),
+    ).toEqual({
+      id: 'user-1',
+      email: 'admin@gradera.local',
+      full_name: 'Local Admin',
+      role: 'admin',
+      roles: ['admin'],
+      status: 'active',
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-02T00:00:00.000Z',
+      last_login_at: null,
+    });
+  });
+});

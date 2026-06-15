@@ -15,6 +15,9 @@ type DbUserWithRoles = {
   email: string;
   fullName: string;
   entraObjectId: string | null;
+  status?: string;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
   userRoles: Array<{ role: { name: AppRoleName } }>;
 };
 
@@ -44,6 +47,10 @@ export function serializeUser(user: DbUserWithRoles) {
     full_name: user.fullName,
     role: resolvePrimaryRole(user.userRoles),
     roles: user.userRoles.map(({ role }) => role.name),
+    status: user.status ?? "pending",
+    created_at: user.createdAt ?? null,
+    updated_at: user.updatedAt ?? null,
+    last_login_at: null,
   };
 }
 
