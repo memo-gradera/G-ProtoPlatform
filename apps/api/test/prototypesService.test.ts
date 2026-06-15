@@ -8,6 +8,14 @@ vi.mock("../src/repositories/prototypesRepository.js", () => ({
   prototypesRepository: {
     getById: vi.fn(),
     delete: vi.fn(),
+    update: vi.fn(),
+    create: vi.fn(),
+  },
+}));
+
+vi.mock("../src/repositories/ideasRepository.js", () => ({
+  ideasRepository: {
+    getById: vi.fn(),
   },
 }));
 
@@ -103,6 +111,53 @@ describe("prototypesService.delete", () => {
     await expect(
       prototypesService.delete(adminUser, "missing"),
     ).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe("prototypesService.update metadata", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(prototypesRepository.getById).mockResolvedValue(ownedPrototype as never);
+    vi.mocked(prototypesRepository.update).mockResolvedValue({
+      ...ownedPrototype,
+      status: "in_production",
+      githubRepoUrl: "https://github.com/org/repo",
+      videoUrls: ["https://loom.com/share/demo"],
+    } as never);
+  });
+
+  it("maps github_repo_url, video_urls, and in_production status", async () => {
+    await prototypesService.update(adminUser, "proto-1", {
+      github_repo_url: "https://github.com/org/repo",
+      video_urls: ["https://loom.com/share/demo"],
+      status: "in_production",
+    });
+
+    expect(prototypesRepository.update).toHaveBeenCalledWith(
+      "proto-1",
+      expect.objectContaining({
+        githubRepoUrl: "https://github.com/org/repo",
+        videoUrls: ["https://loom.com/share/demo"],
+        status: "in_production",
+      }),
+      adminUser.id,
+      ownedPrototype,
+    );
+  });
+
+  it("normalizes empty video_urls array to null", async () => {
+    await prototypesService.update(adminUser, "proto-1", {
+      video_urls: [],
+    });
+
+    expect(prototypesRepository.update).toHaveBeenCalledWith(
+      "proto-1",
+      expect.objectContaining({
+        videoUrls: null,
+      }),
+      adminUser.id,
+      ownedPrototype,
+    );
   });
 });
 

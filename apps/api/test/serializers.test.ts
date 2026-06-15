@@ -14,6 +14,8 @@ describe("serializePrototype", () => {
     ownerId: "user-1",
     demoUrl: "https://demo.example.com",
     screenshotUrl: "https://screenshot.example.com/image.png",
+    githubRepoUrl: "https://github.com/org/repo",
+    videoUrls: ["https://loom.com/share/demo"],
     relatedIdeaId: "idea-1",
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-02T00:00:00.000Z",
@@ -74,6 +76,8 @@ describe("serializePrototype", () => {
       },
       demo_url: "https://demo.example.com",
       screenshot_url: "https://screenshot.example.com/image.png",
+      github_repo_url: "https://github.com/org/repo",
+      video_urls: ["https://loom.com/share/demo"],
       related_idea_id: "idea-1",
       related_idea: {
         id: "idea-1",
@@ -89,11 +93,14 @@ describe("serializePrototype", () => {
     const serialized = serializePrototype({
       id: "proto-2",
       name: "Untagged",
-      status: "draft",
+      status: "in_production",
       ownerId: "user-1",
     });
 
     expect(serialized.tags).toEqual([]);
+    expect(serialized.status).toBe("in_production");
+    expect(serialized.github_repo_url).toBeUndefined();
+    expect(serialized.video_urls).toEqual([]);
     expect(serialized.owner).toBeUndefined();
     expect(serialized.related_idea).toBeUndefined();
   });

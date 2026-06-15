@@ -16,7 +16,15 @@ const appRole = z.enum([
   "executive_reviewer",
   "viewer",
 ]);
-const prototypeStatus = z.enum(["draft", "attached", "published", "archived"]);
+const prototypeStatus = z.enum([
+  "draft",
+  "attached",
+  "published",
+  "archived",
+  "in_production",
+]);
+
+const videoUrlsSchema = z.array(z.string().url()).max(5);
 const reviewDecision = z.enum(["pending", "approved", "rejected"]);
 
 export const createIdeaSchema = z.object({
@@ -67,6 +75,8 @@ export const createPrototypeSchema = z.object({
   owner_id: z.string().uuid().optional(),
   demo_url: z.string().url().optional(),
   screenshot_url: z.string().url().optional(),
+  github_repo_url: z.string().url().optional(),
+  video_urls: videoUrlsSchema.optional(),
   related_idea_id: z.string().uuid().optional(),
 });
 
@@ -76,6 +86,8 @@ export const updatePrototypeSchema = z.object({
   category: z.string().trim().nullable().optional(),
   demo_url: z.string().url().nullable().optional(),
   screenshot_url: z.string().url().nullable().optional(),
+  github_repo_url: z.string().url().nullable().optional(),
+  video_urls: videoUrlsSchema.nullable().optional(),
   related_idea_id: z.string().uuid().nullable().optional(),
   status: prototypeStatus.optional(),
 });

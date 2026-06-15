@@ -13,7 +13,12 @@ export type IdeaStatus =
   | "blocked"
   | "rejected";
 
-export type PrototypeStatus = "draft" | "attached" | "published" | "archived";
+export type PrototypeStatus =
+  | "draft"
+  | "attached"
+  | "published"
+  | "archived"
+  | "in_production";
 
 export type ReviewDecision = "pending" | "approved" | "rejected";
 

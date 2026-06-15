@@ -146,6 +146,15 @@ export function serializeIdea(idea: Record<string, unknown>) {
   };
 }
 
+function serializeVideoUrls(prototype: Record<string, unknown>): string[] {
+  const raw = prototype.videoUrls ?? prototype.video_urls;
+  if (!raw) return [];
+  if (Array.isArray(raw)) {
+    return raw.filter((entry): entry is string => typeof entry === "string");
+  }
+  return [];
+}
+
 export function serializePrototype(prototype: Record<string, unknown>) {
   return {
     id: prototype.id,
@@ -157,6 +166,8 @@ export function serializePrototype(prototype: Record<string, unknown>) {
     owner: serializeOwnerSummary(prototype.owner),
     demo_url: prototype.demoUrl ?? prototype.demo_url,
     screenshot_url: prototype.screenshotUrl ?? prototype.screenshot_url,
+    github_repo_url: prototype.githubRepoUrl ?? prototype.github_repo_url,
+    video_urls: serializeVideoUrls(prototype),
     related_idea_id: prototype.relatedIdeaId ?? prototype.related_idea_id,
     related_idea: serializeRelatedIdeaSummary(
       prototype.relatedIdea ?? prototype.related_idea,

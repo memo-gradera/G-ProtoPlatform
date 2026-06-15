@@ -135,6 +135,7 @@ export default function PrototypeCatalog() {
             <SelectItem value="draft">Draft</SelectItem>
             <SelectItem value="in_development">In Development</SelectItem>
             <SelectItem value="demo_ready">Demo Ready</SelectItem>
+            <SelectItem value="in_production">In Production</SelectItem>
             <SelectItem value="approved">Approved</SelectItem>
             <SelectItem value="archived">Archived</SelectItem>
           </SelectContent>

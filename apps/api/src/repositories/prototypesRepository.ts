@@ -35,6 +35,8 @@ export const prototypesRepository = {
       category?: string;
       demoUrl?: string;
       screenshotUrl?: string;
+      githubRepoUrl?: string;
+      videoUrls?: string[];
       relatedIdeaId?: string;
     },
     actorUserId: string,

@@ -91,6 +91,8 @@ export function createPrototypesRouter(env: Env) {
         ownerId: body.owner_id,
         demoUrl: body.demo_url,
         screenshotUrl: body.screenshot_url,
+        githubRepoUrl: body.github_repo_url,
+        videoUrls: body.video_urls,
         relatedIdeaId: body.related_idea_id,
       });
       created(res, serializePrototype(prototype));

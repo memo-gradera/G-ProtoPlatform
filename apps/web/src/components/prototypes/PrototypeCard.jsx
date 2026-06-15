@@ -4,17 +4,17 @@ import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { getPrototypeOwnerLabel } from '@/services/apiMappers';
 import { getPrototypeCoverState } from '@/lib/prototypeScreenshots';
-import { User, ExternalLink, Calendar } from 'lucide-react';
+import {
+  getPrimaryVideoUrl,
+  getPrototypeCategoryLabel,
+} from '@/lib/prototypeMetadata';
+import { User, ExternalLink, Calendar, Github, Video } from 'lucide-react';
 import { format } from 'date-fns';
-
-const categoryLabels = {
-  ai_ml: 'AI / ML', automation: 'Automation', analytics: 'Analytics',
-  ux: 'UX', infrastructure: 'Infrastructure', integration: 'Integration', other: 'Other'
-};
 
 export default function PrototypeCard({ prototype, onClick }) {
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
   const cover = getPrototypeCoverState(prototype, imageLoadFailed);
+  const primaryVideoUrl = getPrimaryVideoUrl(prototype);
 
   return (
     <Card
@@ -36,17 +36,44 @@ export default function PrototypeCard({ prototype, onClick }) {
             </div>
           </div>
         )}
-        {prototype.demo_url && (
-          <a
-            href={prototype.demo_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="absolute top-2 right-2 w-8 h-8 rounded-lg bg-card/90 backdrop-blur flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={e => e.stopPropagation()}
-          >
-            <ExternalLink className="w-3.5 h-3.5 text-primary" />
-          </a>
-        )}
+        <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          {prototype.github_repo_url && (
+            <a
+              href={prototype.github_repo_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-8 h-8 rounded-lg bg-card/90 backdrop-blur flex items-center justify-center"
+              onClick={e => e.stopPropagation()}
+              aria-label="Open GitHub repository"
+            >
+              <Github className="w-3.5 h-3.5 text-primary" />
+            </a>
+          )}
+          {primaryVideoUrl && (
+            <a
+              href={primaryVideoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-8 h-8 rounded-lg bg-card/90 backdrop-blur flex items-center justify-center"
+              onClick={e => e.stopPropagation()}
+              aria-label="Open demo video"
+            >
+              <Video className="w-3.5 h-3.5 text-primary" />
+            </a>
+          )}
+          {prototype.demo_url && (
+            <a
+              href={prototype.demo_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-8 h-8 rounded-lg bg-card/90 backdrop-blur flex items-center justify-center"
+              onClick={e => e.stopPropagation()}
+              aria-label="Open demo URL"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-primary" />
+            </a>
+          )}
+        </div>
       </div>
 
       <div className="p-4 space-y-3">
@@ -62,7 +89,7 @@ export default function PrototypeCard({ prototype, onClick }) {
         <div className="flex flex-wrap gap-1.5">
           {prototype.category && (
             <Badge variant="secondary" className="text-[10px]">
-              {categoryLabels[prototype.category] || prototype.category}
+              {getPrototypeCategoryLabel(prototype.category)}
             </Badge>
           )}
           {prototype.tags?.map(tag => (

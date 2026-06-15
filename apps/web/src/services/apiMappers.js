@@ -10,11 +10,13 @@ export function fromApiIdeaStatus(status) {
 
 export function toApiPrototypeStatus(status) {
   if (status === 'demo_ready') return 'published';
+  if (status === 'in_development') return 'attached';
   return status;
 }
 
 export function fromApiPrototypeStatus(status) {
   if (status === 'published') return 'demo_ready';
+  if (status === 'attached') return 'in_development';
   return status;
 }
 
@@ -135,10 +137,18 @@ export function mergePrototypeForm(prototype, emptyPrototype = {}) {
     ...normalizeOwnerFields(prototype),
     ...normalizeRelatedIdeaFields(prototype),
     tags: prototype.tags || [],
+    github_repo_url: prototype.github_repo_url ?? '',
+    video_urls: Array.isArray(prototype.video_urls)
+      ? prototype.video_urls.filter((url) => typeof url === 'string')
+      : [],
   };
 }
 
-const API_PROTOTYPE_URL_FIELDS = new Set(['demo_url', 'screenshot_url']);
+const API_PROTOTYPE_URL_FIELDS = new Set([
+  'demo_url',
+  'screenshot_url',
+  'github_repo_url',
+]);
 
 const API_PROTOTYPE_CREATE_FIELDS = new Set([
   'name',
@@ -147,6 +157,8 @@ const API_PROTOTYPE_CREATE_FIELDS = new Set([
   'owner_id',
   'demo_url',
   'screenshot_url',
+  'github_repo_url',
+  'video_urls',
   'related_idea_id',
 ]);
 
@@ -185,6 +197,26 @@ export function normalizeUrlForApi(value, { allowEmpty = false } = {}) {
   }
 }
 
+/**
+ * @param {unknown} value
+ * @param {{ allowEmpty?: boolean }} [options]
+ * @returns {string[] | null | undefined}
+ */
+export function normalizeVideoUrlsForApi(value, { allowEmpty = false } = {}) {
+  if (value == null) return undefined;
+  if (!Array.isArray(value)) return undefined;
+
+  const normalized = value
+    .map((entry) => normalizeUrlForApi(entry))
+    .filter((entry) => typeof entry === 'string' && entry.length > 0);
+
+  if (normalized.length === 0) {
+    return allowEmpty ? null : undefined;
+  }
+
+  return normalized.slice(0, 5);
+}
+
 function mapPrototypeFormToApiPayload(form, allowedFields, { allowNullUrls = false } = {}) {
   const payload = {};
 
@@ -196,6 +228,14 @@ function mapPrototypeFormToApiPayload(form, allowedFields, { allowNullUrls = fal
 
     if (API_PROTOTYPE_URL_FIELDS.has(key)) {
       const normalized = normalizeUrlForApi(value, { allowEmpty: allowNullUrls });
+      if (normalized !== undefined) {
+        payload[key] = normalized;
+      }
+      continue;
+    }
+
+    if (key === 'video_urls') {
+      const normalized = normalizeVideoUrlsForApi(value, { allowEmpty: allowNullUrls });
       if (normalized !== undefined) {
         payload[key] = normalized;
       }
@@ -416,6 +456,10 @@ export function normalizePrototype(prototype) {
       prototype.tags ??
       prototype.tag_maps?.map((entry) => entry.tag?.name).filter(Boolean) ??
       [],
+    video_urls: Array.isArray(prototype.video_urls)
+      ? prototype.video_urls.filter((url) => typeof url === 'string')
+      : [],
+    github_repo_url: prototype.github_repo_url ?? '',
   };
 }
 

@@ -12,6 +12,7 @@ const statusStyles = {
   draft: 'bg-slate-50 text-slate-600 border-slate-200',
   in_development: 'bg-amber-50 text-amber-700 border-amber-200',
   demo_ready: 'bg-violet-50 text-violet-700 border-violet-200',
+  in_production: 'bg-cyan-50 text-cyan-700 border-cyan-200',
   archived: 'bg-slate-100 text-slate-500 border-slate-200',
 };
 
@@ -26,6 +27,7 @@ const statusLabels = {
   draft: 'Draft',
   in_development: 'In Development',
   demo_ready: 'Demo Ready',
+  in_production: 'In Production',
   archived: 'Archived',
 };
 

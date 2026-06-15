@@ -16,6 +16,9 @@ import {
   normalizePrototype,
   normalizeReview,
   normalizeUrlForApi,
+  normalizeVideoUrlsForApi,
+  toApiPrototypeStatus,
+  fromApiPrototypeStatus,
 } from '@/services/apiMappers';
 import { mergeIdeaForm } from '@/components/shared/ideaFormConfig';
 
@@ -138,6 +141,51 @@ describe('prototype API payload mapping', () => {
       name: 'Updated Prototype',
       screenshot_url: null,
     });
+  });
+
+  it('maps github_repo_url and video_urls on create', () => {
+    const payload = mapPrototypeFormToApiCreatePayload({
+      name: 'Linked Prototype',
+      github_repo_url: 'github.com/org/repo',
+      video_urls: ['loom.com/share/demo', ''],
+    });
+
+    expect(payload).toEqual({
+      name: 'Linked Prototype',
+      github_repo_url: 'https://github.com/org/repo',
+      video_urls: ['https://loom.com/share/demo'],
+    });
+  });
+
+  it('sends null for cleared github and video fields on update', () => {
+    const payload = mapPrototypeFormToApiUpdatePayload({
+      github_repo_url: '',
+      video_urls: ['', ''],
+    });
+
+    expect(payload).toEqual({
+      github_repo_url: null,
+      video_urls: null,
+    });
+  });
+
+  it('passes in_production status through API mapping unchanged', () => {
+    expect(toApiPrototypeStatus('in_production')).toBe('in_production');
+    expect(fromApiPrototypeStatus('in_production')).toBe('in_production');
+  });
+
+  it('normalizesPrototype includes github_repo_url and video_urls', () => {
+    const normalized = normalizePrototype({
+      id: 'proto-1',
+      name: 'Demo',
+      status: 'in_production',
+      github_repo_url: 'https://github.com/org/repo',
+      video_urls: ['https://loom.com/share/demo'],
+    });
+
+    expect(normalized.status).toBe('in_production');
+    expect(normalized.github_repo_url).toBe('https://github.com/org/repo');
+    expect(normalized.video_urls).toEqual(['https://loom.com/share/demo']);
   });
 });
 

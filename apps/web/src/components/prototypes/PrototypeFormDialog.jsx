@@ -32,18 +32,26 @@ import {
   MAX_PROTOTYPE_SCREENSHOTS,
   validatePrototypeScreenshotSelection,
 } from '@/lib/prototypeScreenshots';
+import {
+  createEmptyVideoUrlFields,
+  MAX_PROTOTYPE_VIDEO_URLS,
+  PROTOTYPE_CATEGORY_OPTIONS,
+} from '@/lib/prototypeMetadata';
 
 const STATUS_OPTIONS = [
   { value: 'draft', label: 'Draft' },
   { value: 'in_development', label: 'In Development' },
   { value: 'demo_ready', label: 'Demo Ready', transitionAction: 'prototype.publish' },
+  { value: 'in_production', label: 'In Production' },
   { value: 'approved', label: 'Approved' },
   { value: 'archived', label: 'Archived', transitionAction: 'prototype.archive' },
 ];
 
 const emptyProto = {
   name: '', category: 'other', status: 'draft', owner: '',
-  demo_url: '', screenshot_url: '', screenshot_urls: [], tags: [], related_idea_id: '', description: ''
+  demo_url: '', screenshot_url: '', screenshot_urls: [],
+  github_repo_url: '', video_urls: [''],
+  tags: [], related_idea_id: '', description: ''
 };
 
 function screenshotsFromPrototype(prototype) {
@@ -98,6 +106,7 @@ export default function PrototypeFormDialog({
         ...merged,
         screenshot_url: getCoverScreenshotUrl(nextScreenshots),
         screenshot_urls: nextScreenshots.map((item) => item.url),
+        video_urls: createEmptyVideoUrlFields(merged.video_urls),
       });
       setScreenshots(nextScreenshots);
     } else {
@@ -107,6 +116,33 @@ export default function PrototypeFormDialog({
   }, [prototype, open]);
 
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
+
+  const setVideoUrl = (index, value) => {
+    setForm((prev) => {
+      const next = [...(prev.video_urls ?? [])];
+      next[index] = value;
+      return { ...prev, video_urls: next };
+    });
+  };
+
+  const addVideoUrlField = () => {
+    setForm((prev) => {
+      const current = prev.video_urls ?? [''];
+      if (current.length >= MAX_PROTOTYPE_VIDEO_URLS) return prev;
+      return { ...prev, video_urls: [...current, ''] };
+    });
+  };
+
+  const removeVideoUrlField = (index) => {
+    setForm((prev) => {
+      const current = [...(prev.video_urls ?? [''])];
+      current.splice(index, 1);
+      return {
+        ...prev,
+        video_urls: current.length > 0 ? current : [''],
+      };
+    });
+  };
 
   const syncScreenshots = (nextScreenshots) => {
     setScreenshots(nextScreenshots);
@@ -192,13 +228,11 @@ export default function PrototypeFormDialog({
               <Select value={form.category} onValueChange={v => set('category', v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ai_ml">AI / ML</SelectItem>
-                  <SelectItem value="automation">Automation</SelectItem>
-                  <SelectItem value="analytics">Analytics</SelectItem>
-                  <SelectItem value="ux">UX</SelectItem>
-                  <SelectItem value="infrastructure">Infrastructure</SelectItem>
-                  <SelectItem value="integration">Integration</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  {PROTOTYPE_CATEGORY_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -223,6 +257,49 @@ export default function PrototypeFormDialog({
           <div className="space-y-1.5">
             <Label>Demo URL</Label>
             <Input value={form.demo_url} onChange={e => set('demo_url', e.target.value)} placeholder="https://..." />
+          </div>
+          <div className="space-y-1.5">
+            <Label>GitHub Repo</Label>
+            <Input
+              value={form.github_repo_url}
+              onChange={e => set('github_repo_url', e.target.value)}
+              placeholder="https://github.com/org/repo"
+            />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <Label>Demo Video(s)</Label>
+              {(form.video_urls?.length ?? 0) < MAX_PROTOTYPE_VIDEO_URLS && (
+                <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={addVideoUrlField}>
+                  Add video
+                </Button>
+              )}
+            </div>
+            {(form.video_urls ?? ['']).map((url, index) => (
+              <div key={`video-${index}`} className="flex items-center gap-2">
+                <Label className="w-16 shrink-0 text-xs text-muted-foreground">
+                  Video {index + 1}
+                </Label>
+                <Input
+                  value={url}
+                  onChange={e => setVideoUrl(index, e.target.value)}
+                  placeholder="Loom, Teams recording, YouTube, SharePoint, etc."
+                  className="flex-1"
+                />
+                {(form.video_urls?.length ?? 0) > 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => removeVideoUrlField(index)}
+                    aria-label={`Remove video ${index + 1}`}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
+            ))}
           </div>
           <div className="space-y-1.5">
             <Label>Related Idea</Label>
