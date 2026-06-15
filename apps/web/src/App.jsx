@@ -52,6 +52,7 @@ const AuthenticatedApp = () => {
           <Route path="/prototypes" element={<PrototypeCatalog />} />
           <Route path="/review" element={<ExecutiveReview />} />
           <Route path="/rejected" element={<RejectedArchive />} />
+          <Route path="/rejected-archive" element={<Navigate to="/rejected" replace />} />
           <Route path="/settings" element={<AdminSettings />} />
         </Route>
       </Route>

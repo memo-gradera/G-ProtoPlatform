@@ -5,7 +5,6 @@ import {
   Columns3,
   Box,
   ShieldCheck,
-  Archive,
   Settings,
   LogOut,
   ChevronLeft,
@@ -22,7 +21,6 @@ const navItems = [
   { label: 'Kanban Board', icon: Columns3, path: '/kanban' },
   { label: 'Prototypes', icon: Box, path: '/prototypes' },
   { label: 'Executive Review', icon: ShieldCheck, path: '/review' },
-  { label: 'Rejected Archive', icon: Archive, path: '/rejected' },
   { label: 'Admin Settings', icon: Settings, path: '/settings' },
 ];
 
