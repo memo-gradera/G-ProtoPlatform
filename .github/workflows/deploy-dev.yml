@@ -58,6 +58,9 @@ jobs:
           rm -rf packages/domain/dist packages/domain/tsconfig.build.tsbuildinfo
           pnpm --filter @proto-platform/domain build
 
+      - name: Generate Prisma Client
+        run: pnpm --filter gradera-api exec prisma generate
+
       - name: Test web app
         run: pnpm --filter gradera-innovation-hub test
 
@@ -66,6 +69,9 @@ jobs:
 
       - name: Build domain package for API
         run: pnpm --filter @proto-platform/domain build
+
+      - name: Generate Prisma Client for API build
+        run: pnpm --filter gradera-api exec prisma generate
 
       - name: Build API
         run: pnpm --filter gradera-api build
