@@ -3,6 +3,7 @@ import {
   PERMISSIONS,
   hasPermission,
   canPerformAction,
+  hasUnrestrictedIdeaTransitions,
 } from './rbac.js';
 
 function user(role, overrides = {}) {
@@ -59,6 +60,22 @@ describe('rbac', () => {
         expect(hasPermission(admin, permission)).toBe(true);
       }
     });
+
+    it('has unrestricted idea transitions', () => {
+      expect(hasUnrestrictedIdeaTransitions(admin)).toBe(true);
+      expect(
+        canPerformAction(admin, 'review.reject', { idea: ownedIdea }),
+      ).toBe(true);
+      expect(
+        canPerformAction(admin, 'review.approve', { idea: ownedIdea }),
+      ).toBe(true);
+      expect(
+        canPerformAction(admin, 'idea.transition', {
+          idea: unownedIdea,
+          targetStatus: 'rejected',
+        }),
+      ).toBe(true);
+    });
   });
 
   describe('viewer', () => {
@@ -73,6 +90,7 @@ describe('rbac', () => {
           targetStatus: 'in_progress',
         }),
       ).toBe(false);
+      expect(hasUnrestrictedIdeaTransitions(viewer)).toBe(false);
       expect(canPerformAction(viewer, 'idea.delete', { idea: ownedIdea })).toBe(false);
       expect(canPerformAction(viewer, 'prototype.create')).toBe(false);
       expect(canPerformAction(viewer, 'prototype.delete', { prototype: ownedPrototype })).toBe(
@@ -89,6 +107,19 @@ describe('rbac', () => {
       expect(canPerformAction(lead, 'prototype.delete', { prototype: unownedPrototype })).toBe(
         true,
       );
+    });
+
+    it('has unrestricted idea transitions', () => {
+      expect(hasUnrestrictedIdeaTransitions(lead)).toBe(true);
+      expect(
+        canPerformAction(lead, 'review.reject', { idea: ownedIdea }),
+      ).toBe(true);
+      expect(
+        canPerformAction(lead, 'idea.transition', {
+          idea: unownedIdea,
+          targetStatus: 'blocked',
+        }),
+      ).toBe(true);
     });
   });
 

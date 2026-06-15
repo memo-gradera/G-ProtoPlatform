@@ -4,6 +4,7 @@ import {
   canPerformAction,
   getUserRole,
   hasPermission,
+  hasUnrestrictedIdeaTransitions,
 } from '@/domain/rbac';
 
 export function usePermissions() {
@@ -15,5 +16,6 @@ export function usePermissions() {
     hasPermission: (permission) => hasPermission(user, permission),
     canAccessRoute: (route) => canAccessRoute(user, route),
     canPerformAction: (action, resource) => canPerformAction(user, action, resource),
+    hasUnrestrictedIdeaTransitions: () => hasUnrestrictedIdeaTransitions(user),
   };
 }

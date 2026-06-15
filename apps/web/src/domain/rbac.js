@@ -189,6 +189,11 @@ function canReviewDecision(user, idea) {
   return idea?.status === 'ready_4_demo';
 }
 
+export function hasUnrestrictedIdeaTransitions(user) {
+  const role = getUserRole(user);
+  return role === 'admin' || role === 'innovation_lead';
+}
+
 /**
  * @param {object|null|undefined} user
  * @param {string} action
@@ -211,24 +216,36 @@ export function canPerformAction(user, action, resource = {}) {
       return hasPermission(user, PERMISSIONS.IDEA_DELETE);
 
     case 'idea.reopen_rejected':
+      if (hasUnrestrictedIdeaTransitions(user)) {
+        return hasPermission(user, PERMISSIONS.IDEA_TRANSITION);
+      }
       return (
         hasPermission(user, PERMISSIONS.IDEA_REOPEN_REJECTED) &&
         resource.idea?.status === 'rejected'
       );
 
     case 'review.approve':
+      if (hasUnrestrictedIdeaTransitions(user)) {
+        return hasPermission(user, PERMISSIONS.IDEA_TRANSITION);
+      }
       return (
         hasPermission(user, PERMISSIONS.REVIEW_APPROVE) &&
         canReviewDecision(user, resource.idea)
       );
 
     case 'review.reject':
+      if (hasUnrestrictedIdeaTransitions(user)) {
+        return hasPermission(user, PERMISSIONS.IDEA_TRANSITION);
+      }
       return (
         hasPermission(user, PERMISSIONS.REVIEW_REJECT) &&
         canReviewDecision(user, resource.idea)
       );
 
     case 'review.needs_revision':
+      if (hasUnrestrictedIdeaTransitions(user)) {
+        return hasPermission(user, PERMISSIONS.IDEA_TRANSITION);
+      }
       return (
         hasPermission(user, PERMISSIONS.IDEA_TRANSITION) &&
         canReviewDecision(user, resource.idea)

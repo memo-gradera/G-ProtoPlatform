@@ -1,5 +1,5 @@
 import { canTransition } from '@/domain/ideaWorkflow';
-import { PERMISSIONS } from '@/domain/rbac';
+import { hasUnrestrictedIdeaTransitions, PERMISSIONS } from '@/domain/rbac';
 
 export const KANBAN_COLUMNS = Object.freeze([
   'ideas',
@@ -31,9 +31,18 @@ export function resolveTransitionAction(idea, targetStorageStatus) {
 }
 
 /** Whether workflow + RBAC allow moving an idea to a specific column. */
-export function canAuthorizeTransition(idea, targetStorageStatus, canPerformAction) {
+export function canAuthorizeTransition(
+  idea,
+  targetStorageStatus,
+  canPerformAction,
+  user,
+) {
   if (!idea || idea.status === targetStorageStatus) return false;
   if (!canTransition(idea.status, targetStorageStatus)) return false;
+
+  if (user && hasUnrestrictedIdeaTransitions(user)) {
+    return canPerformAction('idea.transition', { idea, targetStatus: targetStorageStatus });
+  }
 
   const action = resolveTransitionAction(idea, targetStorageStatus);
   if (action === 'idea.transition') {
@@ -49,17 +58,25 @@ export function canAuthorizeTransition(idea, targetStorageStatus, canPerformActi
  * isDragDisabled flag per card — not per drop zone. The actual destination is unknown
  * until drop, so callers must validate the real target before mutating.
  */
-export function hasAnyDraggableTarget(idea, canPerformAction, hasPermission) {
+export function hasAnyDraggableTarget(idea, canPerformAction, hasPermission, user) {
   if (!idea) return false;
 
-  const canDragOnKanban =
-    hasPermission(PERMISSIONS.IDEA_TRANSITION) ||
-    (idea.status === 'rejected' && hasPermission(PERMISSIONS.IDEA_REOPEN_REJECTED));
-  if (!canDragOnKanban) return false;
+  if (!hasPermission(PERMISSIONS.IDEA_TRANSITION)) {
+    const canReopenRejected =
+      idea.status === 'rejected' &&
+      hasPermission(PERMISSIONS.IDEA_REOPEN_REJECTED);
+    if (!canReopenRejected) return false;
+  }
+
+  if (user && hasUnrestrictedIdeaTransitions(user)) {
+    return KANBAN_COLUMNS.some(
+      (target) => target !== idea.status && canTransition(idea.status, target),
+    );
+  }
 
   return KANBAN_COLUMNS.some(
     (target) =>
       target !== idea.status &&
-      canAuthorizeTransition(idea, target, canPerformAction),
+      canAuthorizeTransition(idea, target, canPerformAction, user),
   );
 }

@@ -19,6 +19,7 @@ export {
   getUserRole,
   hasPermission,
   canPerformAction,
+  hasUnrestrictedIdeaTransitions,
 } from "./rbac/rbac.policy.js";
 export type {
   Permission,

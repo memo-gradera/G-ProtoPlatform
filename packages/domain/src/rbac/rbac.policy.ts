@@ -183,6 +183,14 @@ function canReviewDecision(idea?: IdeaResource): boolean {
   return idea?.status === "ready_for_demo" || idea?.status === "ready_4_demo";
 }
 
+/** Admin and innovation_lead bypass role-specific transition gates (review/reopen paths). */
+export function hasUnrestrictedIdeaTransitions(
+  user: RbacUser | null | undefined,
+): boolean {
+  const role = getUserRole(user);
+  return role === "admin" || role === "innovation_lead";
+}
+
 export function canPerformAction(
   user: RbacUser | null | undefined,
   action: RbacAction,
@@ -206,21 +214,33 @@ export function canPerformAction(
     case "idea.delete":
       return hasPermission(user, PERMISSIONS.IDEA_DELETE);
     case "idea.reopen_rejected":
+      if (hasUnrestrictedIdeaTransitions(user)) {
+        return hasPermission(user, PERMISSIONS.IDEA_TRANSITION);
+      }
       return (
         hasPermission(user, PERMISSIONS.IDEA_REOPEN_REJECTED) &&
-        (resource.idea?.status === "rejected")
+        resource.idea?.status === "rejected"
       );
     case "review.approve":
+      if (hasUnrestrictedIdeaTransitions(user)) {
+        return hasPermission(user, PERMISSIONS.IDEA_TRANSITION);
+      }
       return (
         hasPermission(user, PERMISSIONS.REVIEW_APPROVE) &&
         canReviewDecision(resource.idea)
       );
     case "review.reject":
+      if (hasUnrestrictedIdeaTransitions(user)) {
+        return hasPermission(user, PERMISSIONS.IDEA_TRANSITION);
+      }
       return (
         hasPermission(user, PERMISSIONS.REVIEW_REJECT) &&
         canReviewDecision(resource.idea)
       );
     case "review.needs_revision":
+      if (hasUnrestrictedIdeaTransitions(user)) {
+        return hasPermission(user, PERMISSIONS.IDEA_TRANSITION);
+      }
       return (
         hasPermission(user, PERMISSIONS.IDEA_TRANSITION) &&
         canReviewDecision(resource.idea)

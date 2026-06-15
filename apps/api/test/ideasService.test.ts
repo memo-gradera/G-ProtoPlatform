@@ -133,6 +133,40 @@ describe("ideasService.transition", () => {
       }),
     ).rejects.toBeInstanceOf(ForbiddenError);
   });
+
+  it("allows innovation_lead to transition unowned idea to rejected", async () => {
+    vi.mocked(ideasRepository.getById).mockResolvedValue({
+      ...baseIdea,
+      status: "ideas",
+      ownerId: "other-user-id",
+    } as never);
+    vi.mocked(ideasRepository.transition).mockResolvedValue({
+      ...baseIdea,
+      status: "rejected",
+      rejectionReason: "Not a fit",
+    } as never);
+
+    await ideasService.transition(innovationLeadUser, "idea-1", {
+      status: "rejected",
+      rejection_reason: "Not a fit",
+    });
+
+    expect(ideasRepository.transition).toHaveBeenCalledOnce();
+  });
+
+  it("rejects transition when executive_reviewer lacks idea.transition", async () => {
+    vi.mocked(ideasRepository.getById).mockResolvedValue({
+      ...baseIdea,
+      status: "ready_for_demo",
+    } as never);
+
+    await expect(
+      ideasService.transition(executiveReviewerUser, "idea-1", {
+        status: "approved",
+        decision_notes: "Approved",
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
 });
 
 describe("ideasService.update", () => {
@@ -254,5 +288,21 @@ describe("RBAC canPerformAction", () => {
     expect(
       canPerformAction(innovationLeadUser, "idea.delete", { idea: baseIdea }),
     ).toBe(true);
+  });
+
+  it("admin and innovation_lead have unrestricted transition actions", () => {
+    const ideasStageIdea = { ownerId: "other", status: "ideas" };
+    expect(
+      canPerformAction(adminUser, "review.reject", { idea: ideasStageIdea }),
+    ).toBe(true);
+    expect(
+      canPerformAction(innovationLeadUser, "review.reject", { idea: ideasStageIdea }),
+    ).toBe(true);
+    expect(
+      canPerformAction(viewerUser, "idea.transition", {
+        idea: baseIdea,
+        targetStatus: "in_progress",
+      }),
+    ).toBe(false);
   });
 });

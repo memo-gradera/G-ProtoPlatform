@@ -39,12 +39,13 @@ export default function KanbanBoard() {
   const [createOpen, setCreateOpen] = useState(false);
   const [detailIdea, setDetailIdea] = useState(null);
   const queryClient = useQueryClient();
-  const { canPerformAction, hasPermission } = usePermissions();
+  const { canPerformAction, hasPermission, user } = usePermissions();
 
   const canCreate = canPerformAction('idea.create');
   const canEditIdea = (idea) => canPerformAction('idea.edit', { idea });
   const canDeleteIdea = (idea) => canPerformAction('idea.delete', { idea });
-  const canDragIdea = (idea) => hasAnyDraggableTarget(idea, canPerformAction, hasPermission);
+  const canDragIdea = (idea) =>
+    hasAnyDraggableTarget(idea, canPerformAction, hasPermission, user);
 
   const ideasListKey = queryKeys.ideas.list();
 
@@ -107,7 +108,7 @@ export default function KanbanBoard() {
 
     // Drop validates the actual target column (RBAC + workflow fields). Service layer
     // re-validates on mutate; cache updates only in moveMutation.onSuccess.
-    if (!canAuthorizeTransition(idea, newStatus, canPerformAction)) {
+    if (!canAuthorizeTransition(idea, newStatus, canPerformAction, user)) {
       showAccessDeniedToast();
       return;
     }

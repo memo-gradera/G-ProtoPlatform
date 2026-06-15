@@ -7,7 +7,7 @@ import {
   WorkflowValidationError,
 } from '@/domain/ideaWorkflow';
 import { devDataStore, isDevDataBypassEnabled } from '@/lib/devDataStore';
-import { assertCanPerformAction } from '@/lib/permissionGuard';
+import { assertCanPerformAction, getCurrentUser } from '@/lib/permissionGuard';
 import { ideaStatusHistoryService } from '@/services/ideaStatusHistoryService';
 import { isApiBackendEnabled } from '@/services/backendMode';
 import { apiClient } from '@/services/apiClient';
@@ -17,6 +17,7 @@ import {
   mapIdeaFormToApiUpdatePayload,
   normalizeIdea,
 } from '@/services/apiMappers';
+import { hasUnrestrictedIdeaTransitions } from '@/domain/rbac';
 
 const DEFAULT_SORT = '-created_date';
 const DEFAULT_LIMIT = 500;
@@ -115,8 +116,14 @@ export const ideasService = {
     const storageStatus = toStorageStatus(targetStatus);
 
     const previousStatus = idea.status;
+    const user = await getCurrentUser();
 
-    if (previousStatus === 'rejected' && storageStatus === 'ideas') {
+    if (hasUnrestrictedIdeaTransitions(user)) {
+      await assertCanPerformAction('idea.transition', {
+        idea,
+        targetStatus: storageStatus,
+      });
+    } else if (previousStatus === 'rejected' && storageStatus === 'ideas') {
       await assertCanPerformAction('idea.reopen_rejected', { idea });
     } else if (storageStatus === 'approved') {
       await assertCanPerformAction('review.approve', { idea });
