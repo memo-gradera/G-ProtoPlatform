@@ -6,6 +6,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import AppVersionBadge from '@/components/AppVersionBadge';
 import GraderaLogo from '@/components/GraderaLogo';
 
 import Login from '@/pages/Login';
@@ -27,7 +28,7 @@ const AuthenticatedApp = () => {
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 bg-background">
-        <GraderaLogo size="lg" />
+        <GraderaLogo size="lg" tone="onLight" />
         <div className="w-8 h-8 border-4 border-border border-t-primary rounded-full animate-spin" />
       </div>
     );
@@ -68,6 +69,7 @@ function App() {
           <AuthenticatedApp />
         </Router>
         <Toaster />
+        <AppVersionBadge />
       </QueryClientProvider>
     </AuthProvider>
   )

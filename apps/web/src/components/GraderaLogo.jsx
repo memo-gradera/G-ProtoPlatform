@@ -1,18 +1,25 @@
 import React from 'react';
+import { GRADERA_LOGO_SRC } from '@/lib/logoAsset';
 import { cn } from '@/lib/utils';
 
-/** Bump when replacing public/gradera-logo.svg to bust browser cache. */
-export const GRADERA_LOGO_SRC = '/gradera-logo.svg?v=2';
-
+/** Rendered dimensions (Tailwind): sm 64px, md 80px, lg 112px, xl 128px (2x previous sizes). */
 const sizeMap = {
-  sm: 'w-8 h-8',
-  md: 'w-10 h-10',
-  lg: 'w-14 h-14',
-  xl: 'w-16 h-16',
+  sm: 'w-14 h-14 sm:w-16 sm:h-16',
+  md: 'w-16 h-16 sm:w-20 sm:h-20',
+  lg: 'w-24 h-24 sm:w-28 sm:h-28',
+  xl: 'w-28 h-28 sm:w-32 sm:h-32',
+};
+
+const toneMap = {
+  /** White logo for dark surfaces (sidebar). */
+  onDark: '',
+  /** Dark logo for light surfaces (login, splash). */
+  onLight: 'brightness-0 opacity-[0.88]',
 };
 
 export default function GraderaLogo({
   size = 'md',
+  tone = 'onLight',
   showWordmark = false,
   title = 'GRADERA',
   subtitle = 'Innovation Hub',
@@ -23,7 +30,14 @@ export default function GraderaLogo({
       <img
         src={GRADERA_LOGO_SRC}
         alt="Gradera"
-        className={cn(sizeMap[size], 'flex-shrink-0 object-contain')}
+        width={128}
+        height={128}
+        decoding="async"
+        className={cn(
+          sizeMap[size],
+          toneMap[tone],
+          'flex-shrink-0 object-contain',
+        )}
       />
       {showWordmark && (
         <div className="min-w-0 leading-tight">

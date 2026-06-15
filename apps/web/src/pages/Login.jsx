@@ -142,7 +142,7 @@ export default function Login() {
 
   return (
     <AuthLayout
-      logo={<GraderaLogo size="xl" />}
+      logo={<GraderaLogo size="xl" tone="onLight" />}
       title="Welcome back"
       subtitle="GRADERA Innovation Hub"
       subtitleLine2="Rapid Prototype Development Platform"

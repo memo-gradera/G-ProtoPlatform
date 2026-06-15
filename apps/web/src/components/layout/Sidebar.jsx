@@ -38,9 +38,10 @@ export default function Sidebar({ collapsed, onToggle }) {
       "fixed left-0 top-0 h-screen bg-sidebar flex flex-col border-r border-sidebar-border z-40 transition-all duration-300",
       collapsed ? "w-[68px]" : "w-[240px]"
     )}>
-      <div className="flex items-center px-4 h-16 border-b border-sidebar-border">
+      <div className="flex items-center px-3 sm:px-4 h-20 border-b border-sidebar-border min-h-[5rem]">
         <GraderaLogo
           size="sm"
+          tone="onDark"
           showWordmark={!collapsed}
           title="GRADERA"
           subtitle="Innovation Hub"
