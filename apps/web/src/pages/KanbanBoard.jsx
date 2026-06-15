@@ -106,16 +106,15 @@ export default function KanbanBoard() {
     const idea = ideas.find(i => i.id === draggableId);
     if (!idea || idea.status === newStatus) return;
 
-    // Drop validates the actual target column (RBAC + workflow fields). Service layer
-    // re-validates on mutate; cache updates only in moveMutation.onSuccess.
-    if (!canAuthorizeTransition(idea, newStatus, canPerformAction, user)) {
-      showAccessDeniedToast();
-      return;
-    }
-
+    // Workflow first — avoids misleading "access denied" when the graph blocks a move.
     const validation = validateTransition(idea.status, newStatus, idea);
     if (!validation.valid) {
       showTransitionError({ message: validation.message });
+      return;
+    }
+
+    if (!canAuthorizeTransition(idea, newStatus, canPerformAction, user)) {
+      showAccessDeniedToast();
       return;
     }
 

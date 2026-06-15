@@ -123,6 +123,38 @@ describe('kanbanTransitionAuth', () => {
       ).toBe(true);
     });
 
+    it('allows admin to move in_progress → ideas', () => {
+      const { user: u, canPerformAction: canAct } = bindRbac(user('admin'));
+      const inProgressIdea = { id: '5', status: 'in_progress', owner: 'other@example.com' };
+      expect(
+        canAuthorizeTransition(inProgressIdea, 'ideas', canAct, u),
+      ).toBe(true);
+    });
+
+    it('allows innovation_lead to move in_progress → ideas', () => {
+      const { user: u, canPerformAction: canAct } = bindRbac(user('innovation_lead'));
+      const inProgressIdea = { id: '6', status: 'in_progress', owner: 'other@example.com' };
+      expect(
+        canAuthorizeTransition(inProgressIdea, 'ideas', canAct, u),
+      ).toBe(true);
+    });
+
+    it('blocks viewer from in_progress → ideas', () => {
+      const { user: u, canPerformAction: canAct } = bindRbac(user('viewer'));
+      const inProgressIdea = { id: '7', status: 'in_progress', owner: 'dev@example.com' };
+      expect(
+        canAuthorizeTransition(inProgressIdea, 'ideas', canAct, u),
+      ).toBe(false);
+    });
+
+    it('blocks developer from in_progress → ideas', () => {
+      const { user: u, canPerformAction: canAct } = bindRbac(user('developer'));
+      const inProgressIdea = { id: '8', status: 'in_progress', owner: 'dev@example.com' };
+      expect(
+        canAuthorizeTransition(inProgressIdea, 'ideas', canAct, u),
+      ).toBe(false);
+    });
+
     it('allows admin to authorize any workflow-valid column', () => {
       const { user: u, canPerformAction: canAct } = bindRbac(user('admin'));
       const readyIdea = { id: '3', status: 'ready_4_demo', owner: 'other@example.com' };

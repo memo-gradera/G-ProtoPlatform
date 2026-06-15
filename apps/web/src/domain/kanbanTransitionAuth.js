@@ -38,11 +38,12 @@ export function canAuthorizeTransition(
   user,
 ) {
   if (!idea || idea.status === targetStorageStatus) return false;
-  if (!canTransition(idea.status, targetStorageStatus)) return false;
 
   if (user && hasUnrestrictedIdeaTransitions(user)) {
     return canPerformAction('idea.transition', { idea, targetStatus: targetStorageStatus });
   }
+
+  if (!canTransition(idea.status, targetStorageStatus)) return false;
 
   const action = resolveTransitionAction(idea, targetStorageStatus);
   if (action === 'idea.transition') {

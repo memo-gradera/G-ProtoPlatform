@@ -154,6 +154,36 @@ describe("ideasService.transition", () => {
     expect(ideasRepository.transition).toHaveBeenCalledOnce();
   });
 
+  it("allows admin to transition in_progress → ideas", async () => {
+    vi.mocked(ideasRepository.getById).mockResolvedValue({
+      ...baseIdea,
+      status: "in_progress",
+    } as never);
+    vi.mocked(ideasRepository.transition).mockResolvedValue({
+      ...baseIdea,
+      status: "ideas",
+    } as never);
+
+    await ideasService.transition(adminUser, "idea-1", { status: "ideas" });
+
+    expect(ideasRepository.transition).toHaveBeenCalledOnce();
+  });
+
+  it("allows innovation_lead to transition in_progress → ideas", async () => {
+    vi.mocked(ideasRepository.getById).mockResolvedValue({
+      ...baseIdea,
+      status: "in_progress",
+    } as never);
+    vi.mocked(ideasRepository.transition).mockResolvedValue({
+      ...baseIdea,
+      status: "ideas",
+    } as never);
+
+    await ideasService.transition(innovationLeadUser, "idea-1", { status: "ideas" });
+
+    expect(ideasRepository.transition).toHaveBeenCalledOnce();
+  });
+
   it("rejects transition when executive_reviewer lacks idea.transition", async () => {
     vi.mocked(ideasRepository.getById).mockResolvedValue({
       ...baseIdea,

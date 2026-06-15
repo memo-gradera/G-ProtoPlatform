@@ -2,7 +2,7 @@ import type { IdeaStatus } from "@proto-platform/contracts";
 
 const TRANSITIONS: Record<IdeaStatus, readonly IdeaStatus[]> = {
   ideas: ["in_progress", "blocked", "rejected"],
-  in_progress: ["ready_for_demo", "blocked", "rejected"],
+  in_progress: ["ready_for_demo", "ideas", "blocked", "rejected"],
   ready_for_demo: ["approved", "blocked", "rejected", "in_progress"],
   approved: [],
   blocked: ["in_progress"],

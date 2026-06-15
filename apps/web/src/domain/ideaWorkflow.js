@@ -15,7 +15,7 @@ export const IDEA_STATUSES = Object.freeze([
 /** @type {Record<string, readonly string[]>} */
 export const ALLOWED_TRANSITIONS = Object.freeze({
   ideas: ['in_progress', 'blocked', 'rejected'],
-  in_progress: ['ready_for_demo', 'blocked', 'rejected'],
+  in_progress: ['ready_for_demo', 'ideas', 'blocked', 'rejected'],
   ready_for_demo: ['approved', 'blocked', 'rejected', 'in_progress'],
   blocked: ['in_progress'],
   approved: [],

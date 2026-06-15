@@ -93,4 +93,61 @@ describe("POST /api/ideas/:id/transition", () => {
     expect(response.status).toBe(200);
     expect(ideasRepository.transition).toHaveBeenCalledOnce();
   });
+
+  it("allows admin to transition in_progress → ideas", async () => {
+    vi.mocked(ideasRepository.getById).mockResolvedValue({
+      ...baseIdea,
+      status: "in_progress",
+    } as never);
+    vi.mocked(ideasRepository.transition).mockResolvedValue({
+      ...baseIdea,
+      status: "ideas",
+    } as never);
+    const app = createTestApp();
+
+    const response = await request(app)
+      .post(`/api/ideas/${ideaId}/transition`)
+      .send({ status: "ideas" });
+
+    expect(response.status).toBe(200);
+    expect(ideasRepository.transition).toHaveBeenCalledOnce();
+  });
+
+  it("allows innovation_lead to transition in_progress → ideas", async () => {
+    vi.mocked(usersRepository.getByEmail).mockResolvedValue(
+      dbUser("innovation_lead") as never,
+    );
+    vi.mocked(ideasRepository.getById).mockResolvedValue({
+      ...baseIdea,
+      status: "in_progress",
+    } as never);
+    vi.mocked(ideasRepository.transition).mockResolvedValue({
+      ...baseIdea,
+      status: "ideas",
+    } as never);
+    const app = createTestApp();
+
+    const response = await request(app)
+      .post(`/api/ideas/${ideaId}/transition`)
+      .send({ status: "ideas" });
+
+    expect(response.status).toBe(200);
+    expect(ideasRepository.transition).toHaveBeenCalledOnce();
+  });
+
+  it("denies viewer in_progress → ideas with 403", async () => {
+    vi.mocked(usersRepository.getByEmail).mockResolvedValue(dbUser("viewer") as never);
+    vi.mocked(ideasRepository.getById).mockResolvedValue({
+      ...baseIdea,
+      status: "in_progress",
+    } as never);
+    const app = createTestApp();
+
+    const response = await request(app)
+      .post(`/api/ideas/${ideaId}/transition`)
+      .send({ status: "ideas" });
+
+    expect(response.status).toBe(403);
+    expect(ideasRepository.transition).not.toHaveBeenCalled();
+  });
 });

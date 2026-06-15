@@ -22,6 +22,11 @@ describe('ideaWorkflow', () => {
       });
     });
 
+    it('allows in_progress → ideas (reverse to backlog)', () => {
+      expect(canTransition('in_progress', 'ideas')).toBe(true);
+      expect(validateTransition('in_progress', 'ideas', {})).toEqual({ valid: true });
+    });
+
     it('normalizes ready_4_demo storage status', () => {
       expect(getAllowedTransitions('ready_4_demo')).toContain('approved');
       expect(getAllowedTransitions('ready_4_demo')).toContain('in_progress');
