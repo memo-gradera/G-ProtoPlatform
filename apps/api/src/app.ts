@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 import type { Env } from "./config/env.js";
+import { getUploadRoot } from "./config/upload.js";
 import { createAuthMiddleware } from "./middleware/auth.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { createRequestLogger } from "./middleware/logging.js";
@@ -20,10 +21,14 @@ export function createApp(env: Env) {
   );
   app.use(createRequestLogger(env));
 
+  // Public static files for locally stored prototype screenshots (dev MVP).
+  // Production should serve from Azure Blob Storage instead.
+  app.use("/uploads", express.static(getUploadRoot(env)));
+
   app.use(createHealthRouter(env));
 
   app.use("/api", createAuthMiddleware(env));
-  app.use("/api", createApiRouter());
+  app.use("/api", createApiRouter(env));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

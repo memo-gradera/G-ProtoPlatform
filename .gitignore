@@ -12,6 +12,7 @@ dist/
 .DS_Store
 *.log
 .vercel
+apps/api/data/uploads/
 
 # Supabase local
 supabase/.branches

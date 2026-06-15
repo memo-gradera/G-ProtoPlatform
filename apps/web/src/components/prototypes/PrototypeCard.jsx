@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { getPrototypeOwnerLabel } from '@/services/apiMappers';
+import { getPrototypeCoverState } from '@/lib/prototypeScreenshots';
 import { User, ExternalLink, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -12,22 +13,26 @@ const categoryLabels = {
 };
 
 export default function PrototypeCard({ prototype, onClick }) {
+  const [imageLoadFailed, setImageLoadFailed] = useState(false);
+  const cover = getPrototypeCoverState(prototype, imageLoadFailed);
+
   return (
     <Card
       className="overflow-hidden border border-border/60 hover:shadow-lg transition-all duration-300 cursor-pointer group"
       onClick={() => onClick(prototype)}
     >
-      <div className="aspect-video bg-muted relative overflow-hidden">
-        {prototype.screenshot_url ? (
+      <div className="aspect-video bg-muted relative overflow-hidden rounded-t-lg">
+        {cover.showImage ? (
           <img
-            src={prototype.screenshot_url}
+            src={cover.screenshotUrl}
             alt={prototype.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            onError={() => setImageLoadFailed(true)}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <span className="text-xl font-bold text-primary">{prototype.name?.charAt(0)}</span>
+              <span className="text-xl font-bold text-primary">{cover.fallbackInitial}</span>
             </div>
           </div>
         )}

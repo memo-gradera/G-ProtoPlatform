@@ -9,12 +9,6 @@ vi.mock('@/services/backendMode', () => ({
   isApiBackendEnabled: vi.fn(),
 }));
 
-vi.mock('@/services/apiClient', () => ({
-  apiClient: {
-    get: vi.fn(),
-  },
-}));
-
 vi.mock('@/auth/msalConfig', () => ({
   getApiBaseUrl: vi.fn(() => 'http://localhost:8080/api'),
 }));
@@ -24,10 +18,9 @@ vi.mock('@/auth/tokenProvider', () => ({
 }));
 
 import { isApiBackendEnabled } from '@/services/backendMode';
-import { apiClient } from '@/services/apiClient';
 import {
   filesService,
-  FileUploadUnavailableError,
+  FileUploadError,
 } from '@/services/filesService';
 
 describe('filesService API mode', () => {
@@ -36,23 +29,44 @@ describe('filesService API mode', () => {
     vi.unstubAllGlobals();
   });
 
-  it('throws FileUploadUnavailableError when upload endpoint is not implemented', async () => {
+  it('uploads screenshots via POST /prototypes/screenshots', async () => {
     vi.mocked(isApiBackendEnabled).mockReturnValue(true);
-    vi.mocked(apiClient.get).mockResolvedValue({
-      resource: 'files',
-      status: 'not_implemented',
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          urls: ['http://localhost:8080/uploads/prototypes/a.png'],
+          screenshot_url: 'http://localhost:8080/uploads/prototypes/a.png',
+        },
+      }),
     });
+    vi.stubGlobal('fetch', fetchMock);
 
     const file = new File(['test'], 'shot.png', { type: 'image/png' });
+    const result = await filesService.uploadPrototypeScreenshots([file]);
 
-    await expect(filesService.uploadPrototypeScreenshot(file)).rejects.toBeInstanceOf(
-      FileUploadUnavailableError,
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:8080/api/prototypes/screenshots',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(result.urls).toHaveLength(1);
+    expect(result.screenshot_url).toBe(result.urls[0]);
+  });
+
+  it('surfaces API upload errors', async () => {
+    vi.mocked(isApiBackendEnabled).mockReturnValue(true);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({ message: 'Only PNG, JPG, JPEG, and WebP images are allowed.' }),
+      }),
     );
 
-    await expect(
-      filesService.uploadPrototypeScreenshot(file),
-    ).rejects.toThrow(
-      'File upload is not available in API mode yet. Use a URL or enable local mode.',
+    const file = new File(['test'], 'shot.txt', { type: 'text/plain' });
+
+    await expect(filesService.uploadPrototypeScreenshots([file])).rejects.toBeInstanceOf(
+      FileUploadError,
     );
   });
 });

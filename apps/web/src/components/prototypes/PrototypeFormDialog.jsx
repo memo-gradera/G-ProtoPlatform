@@ -25,6 +25,13 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/components/ui/use-toast';
 import { Upload, X, Trash2 } from 'lucide-react';
 import { mergePrototypeForm } from '@/services/apiMappers';
+import {
+  ACCEPTED_SCREENSHOT_ACCEPT,
+  applyScreenshotUrlsToPrototypeForm,
+  getCoverScreenshotUrl,
+  MAX_PROTOTYPE_SCREENSHOTS,
+  validatePrototypeScreenshotSelection,
+} from '@/lib/prototypeScreenshots';
 
 const STATUS_OPTIONS = [
   { value: 'draft', label: 'Draft' },
@@ -36,8 +43,18 @@ const STATUS_OPTIONS = [
 
 const emptyProto = {
   name: '', category: 'other', status: 'draft', owner: '',
-  demo_url: '', screenshot_url: '', tags: [], related_idea_id: '', description: ''
+  demo_url: '', screenshot_url: '', screenshot_urls: [], tags: [], related_idea_id: '', description: ''
 };
+
+function screenshotsFromPrototype(prototype) {
+  if (!prototype) return [];
+  const urls = Array.isArray(prototype.screenshot_urls) && prototype.screenshot_urls.length
+    ? prototype.screenshot_urls
+    : prototype.screenshot_url
+      ? [prototype.screenshot_url]
+      : [];
+  return urls.map((url, index) => ({ id: `${url}-${index}`, url }));
+}
 
 export default function PrototypeFormDialog({
   open,
@@ -51,6 +68,7 @@ export default function PrototypeFormDialog({
   ideas = [],
 }) {
   const [form, setForm] = useState(emptyProto);
+  const [screenshots, setScreenshots] = useState([]);
   const [tagInput, setTagInput] = useState('');
   const [uploading, setUploading] = useState(false);
   const { canPerformAction } = usePermissions();
@@ -74,13 +92,30 @@ export default function PrototypeFormDialog({
 
   useEffect(() => {
     if (prototype) {
-      setForm(mergePrototypeForm(prototype, emptyProto));
+      const merged = mergePrototypeForm(prototype, emptyProto);
+      const nextScreenshots = screenshotsFromPrototype(merged);
+      setForm({
+        ...merged,
+        screenshot_url: getCoverScreenshotUrl(nextScreenshots),
+        screenshot_urls: nextScreenshots.map((item) => item.url),
+      });
+      setScreenshots(nextScreenshots);
     } else {
       setForm(emptyProto);
+      setScreenshots([]);
     }
   }, [prototype, open]);
 
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
+
+  const syncScreenshots = (nextScreenshots) => {
+    setScreenshots(nextScreenshots);
+    setForm((prev) => ({
+      ...prev,
+      screenshot_url: getCoverScreenshotUrl(nextScreenshots),
+      screenshot_urls: nextScreenshots.map((item) => item.url),
+    }));
+  };
 
   const addTag = () => {
     if (tagInput.trim() && !form.tags.includes(tagInput.trim())) {
@@ -91,12 +126,35 @@ export default function PrototypeFormDialog({
 
   const removeTag = (tag) => set('tags', form.tags.filter(t => t !== tag));
 
-  const handleScreenshot = async (e) => {
-    const file = e.target.files?.[0];
+  const removeScreenshot = (id) => {
+    syncScreenshots(screenshots.filter((item) => item.id !== id));
+  };
+
+  const handleScreenshotUpload = async (event) => {
+    const selectedFiles = Array.from(event.target.files ?? []);
+    event.target.value = '';
+
+    const validation = validatePrototypeScreenshotSelection(
+      selectedFiles,
+      screenshots.length,
+    );
+    if (!validation.valid) {
+      toast({
+        variant: 'destructive',
+        title: 'Upload failed',
+        description: validation.message,
+      });
+      return;
+    }
+
     setUploading(true);
     try {
-      const fileUrl = await filesService.uploadPrototypeScreenshot(file);
-      set('screenshot_url', fileUrl);
+      const result = await filesService.uploadPrototypeScreenshots(selectedFiles);
+      const uploaded = result.urls.map((url, index) => ({
+        id: `${url}-${Date.now()}-${index}`,
+        url,
+      }));
+      syncScreenshots([...screenshots, ...uploaded]);
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -107,6 +165,9 @@ export default function PrototypeFormDialog({
       setUploading(false);
     }
   };
+
+  const coverUrl = getCoverScreenshotUrl(screenshots);
+  const canAddMoreScreenshots = screenshots.length < MAX_PROTOTYPE_SCREENSHOTS;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -175,18 +236,77 @@ export default function PrototypeFormDialog({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5">
-            <Label>Screenshot</Label>
-            <div className="flex items-center gap-3">
-              {form.screenshot_url && (
-                <img src={form.screenshot_url} alt="screenshot" className="w-16 h-10 object-cover rounded border" />
-              )}
-              <label className="flex items-center gap-2 px-3 py-2 text-xs border rounded-lg cursor-pointer hover:bg-muted transition-colors">
-                <Upload className="w-3.5 h-3.5" />
-                {uploading ? 'Uploading...' : 'Upload'}
-                <input type="file" accept="image/*" onChange={handleScreenshot} className="hidden" />
-              </label>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <Label>Screenshots</Label>
+              <span className="text-xs text-muted-foreground">
+                {screenshots.length}/{MAX_PROTOTYPE_SCREENSHOTS} · first image is cover
+              </span>
             </div>
+
+            {coverUrl ? (
+              <div className="rounded-lg border overflow-hidden bg-muted">
+                <img
+                  src={coverUrl}
+                  alt="Prototype cover"
+                  className="w-full h-28 object-cover"
+                />
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed h-28 flex items-center justify-center bg-muted/40">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <span className="text-xl font-bold text-primary">
+                    {form.name?.charAt(0) || '?'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {screenshots.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {screenshots.map((shot, index) => (
+                  <div key={shot.id} className="relative">
+                    <img
+                      src={shot.url}
+                      alt={`Screenshot ${index + 1}`}
+                      className="w-16 h-10 object-cover rounded border"
+                    />
+                    {index === 0 && (
+                      <span className="absolute left-1 top-1 rounded bg-background/90 px-1 text-[10px] font-medium">
+                        Cover
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeScreenshot(shot.id)}
+                      className="absolute -right-1 -top-1 rounded-full bg-background border p-0.5 shadow-sm"
+                      aria-label={`Remove screenshot ${index + 1}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <label
+              className={`inline-flex items-center gap-2 px-3 py-2 text-xs border rounded-lg transition-colors ${
+                canAddMoreScreenshots && !uploading
+                  ? 'cursor-pointer hover:bg-muted'
+                  : 'opacity-50 cursor-not-allowed'
+              }`}
+            >
+              <Upload className="w-3.5 h-3.5" />
+              {uploading ? 'Uploading...' : 'Upload screenshots'}
+              <input
+                type="file"
+                accept={ACCEPTED_SCREENSHOT_ACCEPT}
+                multiple
+                disabled={!canAddMoreScreenshots || uploading}
+                onChange={handleScreenshotUpload}
+                className="hidden"
+              />
+            </label>
           </div>
           <div className="space-y-1.5">
             <Label>Tags</Label>
@@ -250,7 +370,10 @@ export default function PrototypeFormDialog({
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
-            <Button onClick={() => onSave(form)} disabled={loading || deleting || !form.name || !form.owner}>
+            <Button
+              onClick={() => onSave(applyScreenshotUrlsToPrototypeForm(form, screenshots))}
+              disabled={loading || deleting || !form.name || !form.owner}
+            >
               {loading ? 'Saving...' : prototype ? 'Update' : 'Create'}
             </Button>
           </div>

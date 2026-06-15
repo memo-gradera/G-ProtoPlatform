@@ -20,6 +20,8 @@ const rawEnvSchema = z.object({
   JWT_AUDIENCE: z.string().optional(),
   DEV_AUTH_BYPASS: z.string().optional(),
   AUTO_PROVISION_DEV_USERS: z.string().optional(),
+  UPLOAD_DIR: z.string().optional(),
+  API_PUBLIC_URL: z.string().url().optional(),
 });
 
 export type Env = {
@@ -32,6 +34,8 @@ export type Env = {
   JWT_AUDIENCE?: string;
   DEV_AUTH_BYPASS: boolean;
   AUTO_PROVISION_DEV_USERS: boolean;
+  UPLOAD_DIR?: string;
+  API_PUBLIC_URL?: string;
 };
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {

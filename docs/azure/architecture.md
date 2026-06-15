@@ -58,8 +58,11 @@ User browser
 | Store | Purpose |
 |-------|---------|
 | **PostgreSQL** | Users, roles, ideas, prototypes, reviews, status history, audit |
-| **Blob Storage** | Prototype screenshots and file assets (future upload route) |
+| **Blob Storage** | Prototype screenshots and file assets (**production target**) |
+| **Local disk (`data/uploads/`)** | Prototype screenshots today (dev/MVP only — not durable on App Service) |
 | **Entra ID** | Identity only — not authorization roles |
+
+> **Screenshot storage warning:** Current screenshot storage uses local disk for dev/MVP. Production should move to Azure Blob Storage.
 
 ## Environment strategy
 
@@ -132,5 +135,5 @@ Default: **same region for all resources in an environment** (e.g. `eastus` or `
 
 - Actual Azure provisioning (`terraform apply`)
 - GitHub Actions workflows
-- Azure Blob upload implementation in `apps/api`
+- Azure Blob Storage backend for prototype screenshots (local disk MVP exists in `apps/api`)
 - Private Link / VNet integration (future hardening)

@@ -87,7 +87,9 @@ Data access: `src/db/client.ts`, `src/repositories/`, `src/services/`.
 | `GET` | `/api/reviews` | Review view | List reviews (`?idea_id=`) |
 | `POST` | `/api/reviews` | Review approve/reject | Create review (+ idea transition) |
 | `GET` | `/api/dashboard/kpis` | Dashboard view | Pipeline KPIs |
-| `GET` | `/api/files` | Placeholder | Files (not implemented) |
+| `DELETE` | `/api/prototypes/:id` | Auth + RBAC | Hard delete prototype |
+| `POST` | `/api/prototypes/screenshots` | Auth + prototype write | Upload up to 5 prototype screenshots (local disk MVP) |
+| `GET` | `/api/files` | Placeholder | Legacy files probe (superseded by prototype screenshots route) |
 | `GET` | `/api/auth` | Placeholder | Auth (MSAL pending) |
 
 **Health URL (default):** [http://localhost:8080/health](http://localhost:8080/health)
@@ -243,9 +245,18 @@ pnpm --filter gradera-api package:azure-source
 
 Outputs `/tmp/gradera-api-source.zip` with `dist/`, `prisma/`, `package.json`, `package-lock.json`, and `vendor/@proto-platform/domain` — no `node_modules`. See [`docs/azure/github-actions.md`](../../docs/azure/github-actions.md).
 
+## Prototype screenshot uploads
+
+> **Warning:** Current screenshot storage uses local disk for dev/MVP. Production should move to Azure Blob Storage.
+
+- `POST /api/prototypes/screenshots` stores up to 5 images on **local disk** under `data/uploads/` (dev/non-production MVP).
+- Files are served at `/uploads/prototypes/<filename>`.
+- `apps/api/data/uploads/` is gitignored — uploaded files must never be committed.
+- **Azure Blob Storage** is the recommended production target (see `docs/azure/architecture.md`).
+
 ## What is not implemented yet
 
-- Attachment upload routes
+- Attachment upload routes (general-purpose)
 - Automatic deploy on merge to `main` (deploy workflow is manual `workflow_dispatch` only)
 
 ## Delete behavior
