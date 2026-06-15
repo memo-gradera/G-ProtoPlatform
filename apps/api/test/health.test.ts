@@ -38,6 +38,8 @@ describe("GET /health", () => {
       status: "ok",
       service: "gradera-api",
       environment: "test",
+      app_version: expect.any(String),
+      commit_sha: expect.any(String),
     });
   });
 

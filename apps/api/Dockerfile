@@ -3,6 +3,12 @@
 # Build from monorepo root:
 #   docker build -f apps/api/Dockerfile -t gradera-api:latest .
 #
+# With build metadata (CI):
+#   docker build -f apps/api/Dockerfile \
+#     --build-arg COMMIT_SHA=$(git rev-parse HEAD) \
+#     --build-arg APP_VERSION=0.1.0 \
+#     -t gradera-api:latest .
+#
 # Run locally:
 #   docker run --rm -p 8080:8080 --env-file apps/api/.env gradera-api:latest
 
@@ -71,6 +77,9 @@ RUN mkdir -p /deploy/apps/api /deploy/packages \
 # -----------------------------------------------------------------------------
 FROM node:22-slim AS runner
 
+ARG COMMIT_SHA=unknown
+ARG APP_VERSION=0.1.0
+
 RUN apt-get update -y \
   && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
@@ -79,6 +88,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=8080
+ENV COMMIT_SHA=${COMMIT_SHA}
+ENV APP_VERSION=${APP_VERSION}
 
 COPY --from=deploy --chown=node:node /deploy .
 
